@@ -1,0 +1,22 @@
+*.pyc
+
+# Distribution / packaging
+develop-eggs/
+dist/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+
+
+# /
+/bin
+/obj
+/.idea
+/cmake-build-debug
+/data
+
+# Constellations data
+/constellations/ReadMe
+/constellations/bound_20.dat
+
