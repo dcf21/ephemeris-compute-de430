@@ -120,7 +120,7 @@ void compute_ephemeris(settings *s) {
 
             // Convert ecliptic longitude we output to epoch of observation
             double eclTo_lat, eclTo_lng;
-            precess(2451544.5, jd, ecliptic_longitude, ecliptic_latitude, &eclTo_lng, &eclTo_lat);
+            precess(2451545.0, jd, ecliptic_longitude, ecliptic_latitude, &eclTo_lng, &eclTo_lat);
 
 
             buffer[o + 0] = x;
@@ -232,7 +232,7 @@ int main(int argc, const char **argv) {
             OPT_FLOAT('s', "jd_step", &ephemeris_settings.jd_step,
                     "The interval between the lines in the ephemeris, in days"),
             OPT_FLOAT('e', "epoch", &ephemeris_settings.ra_dec_epoch,
-                      "The epoch of the RA/Dec coordinate system, e.g. 2451544.5 for J2000"),
+                      "The epoch of the RA/Dec coordinate system, e.g. 2451545.0 for J2000"),
             OPT_INTEGER('r', "output_format", &ephemeris_settings.output_format,
                     "The output format for the ephemeris. See README.md."),
             OPT_INTEGER('o', "use_orbital_elements", &ephemeris_settings.use_orbital_elements,

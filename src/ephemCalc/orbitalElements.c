@@ -613,7 +613,9 @@ void orbitalElements_comets_readAsciiData() {
 
         perihelion_date = julian_day(perihelion_year, perihelion_month, (int) floor(perihelion_day),
                                      ((int) floor(perihelion_day * 24)) % 24,
-                                     ((int) floor(perihelion_day * 24 * 60)) % 60, 0, &j, temp_err_string);
+                                     ((int) floor(perihelion_day * 24 * 60)) % 60,
+                                     ((int) floor(perihelion_day * 24 * 3600)) % 60,
+                                     &j, temp_err_string);
 
         // Read eccentricity of orbit
         for (j = 41; (line[j] > '\0') && (line[j] <= ' '); j++);
@@ -861,10 +863,11 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
                                                              offset_from_epoch);
 
     // Mean Anomaly for desired epoch (convert rate of change per second into rate of change per day)
+    const double mean_motion = sqrt(GSL_CONST_MKSA_GRAVITATIONAL_CONSTANT * GSL_CONST_MKSA_SOLAR_MASS /
+                                    gsl_pow_3(fabs(a) * GSL_CONST_MKSA_ASTRONOMICAL_UNIT));
+
     const double M = orbital_elements->meanAnomaly +
-                     (jd - orbital_elements->epochOsculation) *
-                     sqrt(GSL_CONST_MKSA_GRAVITATIONAL_CONSTANT * GSL_CONST_MKSA_SOLAR_MASS /
-                          gsl_pow_3(fabs(a) * GSL_CONST_MKSA_ASTRONOMICAL_UNIT)) * 24 * 3600;
+                     (jd - orbital_elements->epochOsculation) * mean_motion * 24 * 3600;
 
     if (e < 0.98) {
         int j;
@@ -909,10 +912,17 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
     const double yh = r * (sin(N) * cos(v + w) + cos(N) * sin(v + w) * cos(inc));
     const double zh = r * (sin(v + w) * sin(inc));
 
+    // Rotate ecliptic coordinates for the precession of the equinoxes
+    const double lon_corr = -3.82394e-5 * (jd - 2451545.) * M_PI / 180;
+
+    const double xh_j2000 = xh * cos(lon_corr) + yh * sin(lon_corr);
+    const double yh_j2000 = -xh * sin(lon_corr) + yh * cos(lon_corr);
+    const double zh_j2000 = zh;
+
     // Sun-centred RA/Dec coordinates
-    *x = xh;
-    *y = yh * cos(epsilon) - zh * sin(epsilon);
-    *z = yh * sin(epsilon) + zh * cos(epsilon);
+    *x = xh_j2000;
+    *y = yh_j2000 * cos(epsilon) - zh_j2000 * sin(epsilon);
+    *z = yh_j2000 * sin(epsilon) + zh_j2000 * cos(epsilon);
 }
 
 void orbitalElements_computeEphemeris(settings *i, int bodyId, double jd, double *x, double *y, double *z, double *ra,

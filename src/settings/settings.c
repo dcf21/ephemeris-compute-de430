@@ -36,7 +36,7 @@ void settings_default(settings *i) {
     i->jd_min = 2451544.5;
     i->jd_max = 2451575.5;
     i->jd_step = 1.0;
-    i->ra_dec_epoch = 2451544.5;  // By default, use J2000 coordinates
+    i->ra_dec_epoch = 2451545.0;  // By default, use J2000 coordinates
     i->output_format = 0;
     i->use_orbital_elements = 0;
     i->output_constellations = 0;

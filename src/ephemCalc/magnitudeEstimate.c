@@ -139,16 +139,16 @@ void magnitudeEstimate(int body_id, double xo, double yo, double zo, double xe, 
                        double *theta_eso, double *eclipticLongitude, double *eclipticLatitude,
                        double *eclipticDistance, settings *i) {
     // Distance of object from Sun
-    double Dso = sqrt(gsl_pow_2(xs - xo) + gsl_pow_2(ys - yo) + gsl_pow_2(zs - zo));
+    const double Dso = sqrt(gsl_pow_2(xs - xo) + gsl_pow_2(ys - yo) + gsl_pow_2(zs - zo));
 
     // Distance of object from Earth
-    double Deo = sqrt(gsl_pow_2(xe - xo) + gsl_pow_2(ye - yo) + gsl_pow_2(ze - zo));
+    const double Deo = sqrt(gsl_pow_2(xe - xo) + gsl_pow_2(ye - yo) + gsl_pow_2(ze - zo));
 
     // Angle <Earth - Object - Sun>
-    double theta = angDist_ABC(xe, ye, ze, xo, yo, zo, xs, ys, zs);
+    const double theta = angDist_ABC(xe, ye, ze, xo, yo, zo, xs, ys, zs);
+    const double theta_deg = theta * 180 / M_PI;
 
     double albedo, Ro;
-    double theta_deg = theta * 180 / M_PI;
 
     // The phase of the object, in range 0 to 1
     *phase = (1 + cos(theta)) / 2;
@@ -234,9 +234,9 @@ void magnitudeEstimate(int body_id, double xo, double yo, double zo, double xe, 
                    2.5 * item->slopeParam_n * log10(Dso);
 
             if (item->slopeParam_G > -100) {
-                double G = item->slopeParam_G; // See page 231 of Meeus
-                double phi_1 = exp(-3.33 * pow(tan(theta / 2), 0.63));
-                double phi_2 = exp(-1.87 * pow(tan(theta / 2), 1.22));
+                const double G = item->slopeParam_G; // See page 231 of Meeus
+                const double phi_1 = exp(-3.33 * pow(tan(theta / 2), 0.63));
+                const double phi_2 = exp(-1.87 * pow(tan(theta / 2), 1.22));
                 *mag -= 2.5 * log10((1 - G) * phi_1 + G * phi_2);
             } else {
                 *mag -= 2.5 * log10(*phase); // Apply geometric phase correction
@@ -276,10 +276,9 @@ void magnitudeEstimate(int body_id, double xo, double yo, double zo, double xe, 
 
     // Compute RA and Dec from J2000.0 coordinates
     {
-        double x2, y2, z2;
-        x2 = xo - xe; // Position of object relative to the geocentre
-        y2 = yo - ye;
-        z2 = zo - ze;
+        const double x2 = xo - xe; // Position of object relative to the geocentre
+        const double y2 = yo - ye;
+        const double z2 = zo - ze;
         *ra = atan2(y2, x2);
         *dec = asin(z2 / sqrt(gsl_pow_2(x2) + gsl_pow_2(y2) + gsl_pow_2(z2)));
         // Clamp RA within range 0 to 2pi radians
@@ -288,26 +287,25 @@ void magnitudeEstimate(int body_id, double xo, double yo, double zo, double xe, 
 
     // Compute ecliptic distance from J2000.0 coordinates
     {
-        double xo2, yo2, zo2, xs2, ys2, zs2, xo3, yo3, zo3, xs3, ys3, /* zs3, */ epsilon;
-        xo2 = xo - xe; // Position of object relative to the geocentre
-        yo2 = yo - ye;
-        zo2 = zo - ze;
-        xs2 = xs - xe; // Position of Sun relative to the geocentre
-        ys2 = ys - ye;
-        zs2 = zs - ze;
+        const double xo2 = xo - xe; // Position of object relative to the geocentre
+        const double yo2 = yo - ye;
+        const double zo2 = zo - ze;
+        const double xs2 = xs - xe; // Position of Sun relative to the geocentre
+        const double ys2 = ys - ye;
+        const double zs2 = zs - ze;
 
-        epsilon = (23. + 26. / 60. + 21.448 / 3600.) / 180. * M_PI; // Meeus (22.2)
+        const double epsilon = (23. + 26. / 60. + 21.448 / 3600.) / 180. * M_PI; // Meeus (22.2)
         // negative x-axis points to the vernal equinox;
         // (y,z) get tipped up by 23.5 degrees from (RA,Dec) to equatorial coordinates
-        xo3 = xo2;
-        yo3 = cos(epsilon) * yo2 + sin(epsilon) * zo2;
-        zo3 = -sin(epsilon) * yo2 + cos(epsilon) * zo2;
+        const double xo3 = xo2;
+        const double yo3 = cos(epsilon) * yo2 + sin(epsilon) * zo2;
+        const double zo3 = -sin(epsilon) * yo2 + cos(epsilon) * zo2;
 
         // negative x-axis points to the vernal equinox;
         // (y,z) get tipped up by 23.5 degrees from (RA,Dec) to equatorial coordinates
-        xs3 = xs2;
-        ys3 = cos(epsilon) * ys2 + sin(epsilon) * zs2;
-        //zs3     = -sin(epsilon)*ys2 + cos(epsilon)*zs2;
+        const double xs3 = xs2;
+        const double ys3 = cos(epsilon) * ys2 + sin(epsilon) * zs2;
+        //const double zs3     = -sin(epsilon)*ys2 + cos(epsilon)*zs2;
 
         *eclipticLongitude = atan2(yo3, xo3);
         *eclipticLatitude = asin(zo3 / sqrt(gsl_pow_2(xo3) + gsl_pow_2(yo3) + gsl_pow_2(zo3)));
@@ -321,10 +319,10 @@ void magnitudeEstimate(int body_id, double xo, double yo, double zo, double xe, 
     }
 
     // Convert RA and Dec to requested epoch
-    if (i->ra_dec_epoch != 2451544.5) {
-        double ra_j2000 = 12 / M_PI * (*ra);
-        double dec_j2000 = 180 / M_PI * (*dec);
-        double jd = i->ra_dec_epoch;
+    if (i->ra_dec_epoch != 2451545.0) {
+        const double ra_j2000 = 12 / M_PI * (*ra);
+        const double dec_j2000 = 180 / M_PI * (*dec);
+        const double jd = i->ra_dec_epoch;
         ra_dec_from_j2000(ra_j2000, dec_j2000, 86400.0 * (jd - 2440587.5), ra, dec);
         *ra *= M_PI / 12;
         *dec *= M_PI / 180;

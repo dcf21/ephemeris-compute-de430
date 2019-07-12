@@ -65,7 +65,7 @@ The following command-line arguments can be used to customise the ephemeris:
 
 * `--jd_step` [float] - Specify the interval between the lines in the ephemeris, in days.
 
-* `--epoch` [float] - Specify the epoch of the RA/Dec coordinate system, e.g. 2451544.5 for J2000 (default).
+* `--epoch` [float] - Specify the epoch of the RA/Dec coordinate system, e.g. 2451545.0 for J2000 (default).
 
 * `--objects` [string] - Specify the list of objects to produce ephemerides for. Objects should be separated by commas, e.g. "jupiter, mars" or "P301, A4, 1P/Halley". See below for an explanation of what names are accepted for objects. If multiiple objects are listed, their positions are listed in sets of columns from left to right.
 
