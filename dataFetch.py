@@ -89,8 +89,8 @@ def fetch_required_files():
             'force_refresh': False
         },
         {
-            'url': 'http://cdsarc.u-strasbg.fr/ftp/VI/49/bound_20.dat',
-            'destination': 'constellations/bound_20.dat',
+            'url': 'http://cdsarc.u-strasbg.fr/ftp/VI/49/bound_20.dat.gz',
+            'destination': 'constellations/bound_20.dat.gz',
             'force_refresh': False
         },
         {
@@ -116,7 +116,10 @@ def fetch_required_files():
                    )
 
     # Unzip the Lowell database of asteroid orbital elements
-    os.system("gunzip -f data/astorb.dat.gz ")
+    os.system("gunzip -f data/astorb.dat.gz")
+
+    # ... and the constellation boundaries
+    os.system("gunzip -f constellations/bound_20.dat.gz")
 
 
 if __name__ == "__main__":
