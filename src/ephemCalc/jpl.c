@@ -687,8 +687,10 @@ void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double 
 
     // DE405 gives us XYZ coordinates relative to the solar system's centre of mass
     // We need to know the Earth's position, in order to convert this to RA and Dec
-    const double earth_mass = 5.9736e24;
-    const double moon_mass = 7.3477e22;
+    // Below are values of GM3 and GMM from DE405. See
+    // <https://web.archive.org/web/20120220062549/http://iau-comm4.jpl.nasa.gov/de405iom/de405iom.pdf>
+    const double earth_mass = 0.8887692390113509e-9;
+    const double moon_mass = 0.1093189565989898e-10;
     const double moon_earth_mass_ratio = moon_mass / (moon_mass + earth_mass);
 
     // Look up the Sun's position
