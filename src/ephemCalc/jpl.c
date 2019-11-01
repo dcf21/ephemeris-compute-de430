@@ -522,7 +522,7 @@ double chebyshev(double *coeffs, int Ncoeff, double x) {
 
 //! jpl_computeXYZ - Evaluate the 3D position of a solar system body at Julian day number JD
 //! \param [in] body_id - The body's index within DE405 (0 Sun - 12 Pluto)
-//! \param [in] jd - Julian day number
+//! \param [in] jd - Julian day number; TT
 //! \param [out] x - Cartesian position of body (AU). This axis points away from RA=0.
 //! \param [out] y - Cartesian position of body (AU).
 //! \param [out] z - Cartesian position of body (AU). This axis points towards north ecliptic pole
@@ -621,7 +621,7 @@ void jpl_computeXYZ(int body_id, double jd, double *x, double *y, double *z) {
 //! time, using data from the DE405 ephemeris.
 //! \param [in] i - Global settings used by ephemerisCompute
 //! \param [in] bodyId - The object ID number we want to query. 0=Mercury. 2=Earth/Moon barycentre. 9=Pluto. 10=Sun, etc
-//! \param [in] jd - The Julian Day number to query
+//! \param [in] jd - The Julian Day number to query; TT
 //! \param [out] x - x,y,z position of body, in AU relative to solar system barycentre.
 //! \param [out] y - negative x points to vernal equinox. z points to celestial north pole (i.e. J2000.0).
 //! \param [out] z

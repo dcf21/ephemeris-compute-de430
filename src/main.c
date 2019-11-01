@@ -58,22 +58,22 @@ static const char *const usage[] = {
 // Main entry point to compute an ephemeris, with parameters described by a settings structure
 void compute_ephemeris(settings *s) {
     FILE *output = stdout;
-    char line[FNAME_LENGTH];
-    double jd;
 
     // Initial processing of settings for this ephemeris
     settings_process(s);
 
     // Loop over all the time points in the ephemeris
-    for (jd = s->jd_min; jd <= s->jd_max; jd += s->jd_step) {
-        int i;
+    const int steps_total = (int)ceil((s->jd_max - s->jd_min) / s->jd_step);
+    for (int step_count=0; step_count<steps_total; step_count++) {
+        const double jd = s->jd_min + step_count * s->jd_step;  // TT
 
-        // When producing a text-based ephemeris, the first column in Julian day number. Binary ephemerides have no
-        // JD column to save space.
+        // When producing a text-based ephemeris, the first column in Julian day number (TT)
+        // Binary ephemerides have no JD column to save space.
         if (!s->output_binary) fprintf(output, "%.12f   ", jd);
 
         // Compute ephemeris
-#pragma omp parallel for shared(output,line,jd) private(i)
+        int i;
+#pragma omp parallel for shared(output) private(i)
         for (i = 0; i < s->objects_count; i++) {
             const int o = i * N_PARAMETERS;
             double ra = 0, dec = 0, x = 0, y = 0, z = 0;
@@ -199,6 +199,7 @@ void compute_ephemeris(settings *s) {
     }
 
     if (DEBUG) {
+        char line[FNAME_LENGTH];
         strcpy(line, "Finished computing ephemeris.");
         ephem_log(line);
     }
@@ -226,9 +227,9 @@ int main(int argc, const char **argv) {
             OPT_HELP(),
             OPT_GROUP("Basic options"),
             OPT_FLOAT('a', "jd_min", &ephemeris_settings.jd_min,
-                    "The Julian day number at which the ephemeris should begin"),
+                    "The Julian day number at which the ephemeris should begin; TT"),
             OPT_FLOAT('b', "jd_max", &ephemeris_settings.jd_max,
-                    "The Julian day number at which the ephemeris should end"),
+                    "The Julian day number at which the ephemeris should end; TT"),
             OPT_FLOAT('s', "jd_step", &ephemeris_settings.jd_step,
                     "The interval between the lines in the ephemeris, in days"),
             OPT_FLOAT('e', "epoch", &ephemeris_settings.ra_dec_epoch,

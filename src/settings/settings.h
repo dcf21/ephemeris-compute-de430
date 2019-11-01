@@ -27,7 +27,7 @@
 #define MAX_OBJECTS 48
 
 typedef struct settings {
-    double jd_min, jd_max, jd_step, ra_dec_epoch;
+    double jd_min, jd_max, jd_step, ra_dec_epoch;  // All specified in TT
     int use_orbital_elements, output_binary, output_format, output_constellations;
     int body_id[MAX_OBJECTS];
     char object_name[MAX_OBJECTS][FNAME_LENGTH];

@@ -33,7 +33,7 @@
 //!
 //! \param [in] i - Global settings used by ephemerisCompute
 //! \param [in] bodyId - The object ID number we want to query. 0=Mercury. 2=Earth/Moon barycentre. 9=Pluto. 10=Sun, etc
-//! \param [in] JD - The Julian Day number to query
+//! \param [in] JD - The Julian Day number to query; TT
 //! \param [out] x - x,y,z position of body, in AU relative to solar system barycentre.
 //! \param [out] y - negative x points to vernal equinox. z points to celestial north pole (i.e. J2000.0).
 //! \param [out] z

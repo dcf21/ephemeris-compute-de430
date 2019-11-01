@@ -790,7 +790,7 @@ orbitalElements *orbitalElements_comets_fetch(int index) {
 
 //! orbitalElements_computeXYZ - Main orbital elements computer
 //! \param [in] body_id - The id number of the object whose position is being queried
-//! \param [in] jd - The Julian day number at which the object's position is wanted
+//! \param [in] jd - The Julian day number at which the object's position is wanted; TT
 //! \param [out] x - The x position of the object relative to the centre of mass of the solar system (in AU; ICRF)
 //! \param [out] y - The x position of the object relative to the centre of mass of the solar system (in AU; ICRF)
 //! \param [out] z - The x position of the object relative to the centre of mass of the solar system (in AU; ICRF)
