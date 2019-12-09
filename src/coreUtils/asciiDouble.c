@@ -208,14 +208,15 @@ unsigned char double_equal(double a, double b) {
 //! \param file The file handle to read from
 //! \param output The character buffer into which to write the characters read
 //! \param MaxLength The maximum number of characters to write to output, including null termination
-
+//! \param output The character buffer into which to write the characters read
+//
 void file_readline(FILE *file, char *output) {
     char c = '\x07';
     char *outputscan = output;
 
     while (((int) c != '\n') && (!feof(file)) && (!ferror(file)))
-        if ((fscanf(file, "%c", &c) >= 0) && (((int) c) > 31)) *(outputscan++) = c;
-    *(outputscan++) = '\0';
+        if ((fscanf(file, "%c", &c) >= 0) && ((((int) c) > 31) || (((int) c) < 0))) *(outputscan++) = c;
+    *outputscan = '\0';
 }
 
 //! get_word - Returns the first word from <in>, terminated by any whitespace. Returns a maximum of <max> characters.
@@ -225,8 +226,8 @@ void file_readline(FILE *file, char *output) {
 
 void get_word(char *out, const char *in, int max) {
     int count = 0;
-    while ((*in <= ' ') && (*in != '\0')) in++; /* Fast-forward over preceding whitespace */
-    while ((*in > ' ') && (count < (max - 1))) {
+    while ((*in <= ' ') && (*in > '\0')) in++; /* Fast-forward over preceding whitespace */
+    while (((*in > ' ') || (*in < '\0')) && (count < (max - 1))) {
         *(out++) = *(in++);
         count++;
     }
@@ -238,10 +239,10 @@ void get_word(char *out, const char *in, int max) {
 //! \return The pointer to the first non-whitespace character of the second word in the input string
 
 char *next_word(char *in) {
-    while ((*in <= ' ') && (*in != '\0')) in++; /* Fast-forward over preceding whitespace */
-    while (*in > ' ') in++; /* Fast-forward over one word */
-    while ((*in <= ' ') && (*in != '\0')) in++; /* Fast-forward over whitespace before next word */
-    return (in); /* Return pointer to next word */
+    while ((*in <= ' ') && (*in > '\0')) in++; /* Fast-forward over preceding whitespace */
+    while ((*in > ' ') || (*in < '\0')) in++; /* Fast-forward over one word */
+    while ((*in <= ' ') && (*in > '\0')) in++; /* Fast-forward over whitespace before next word */
+    return in; /* Return pointer to next word */
 }
 
 //! friendly_time_string - Return pointer to time string in standard format, stored in a static string buffer which will
@@ -262,9 +263,9 @@ char *friendly_time_string() {
 char *str_strip(const char *in, char *out) {
     char *scan = out;
     while ((*in <= ' ') && (*in > '\0')) in++;
-    while ((*in > '\0')) *(scan++) = *(in++);
+    while ((*in != '\0')) *(scan++) = *(in++);
     scan--;
-    while ((scan > out) && (*scan <= ' ')) scan--;
+    while ((scan > out) && (*scan <= ' ') && (*scan >= '\0')) scan--;
     *++scan = '\0';
     return out;
 }
