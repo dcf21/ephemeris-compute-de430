@@ -869,14 +869,30 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
     const double M = orbital_elements->meanAnomaly +
                      (jd - orbital_elements->epochOsculation) * mean_motion * 24 * 3600;
 
-    if (e < 0.98) {
-        int j;
-        double E0, E1, ratio;
-        ratio = 0.5;
+    if (e > 1.02) {
+        // Hyperbolic orbit
+        // See <https://stjarnhimlen.se/comp/ppcomp.html> section 20
+
+        const double M_hyperbolic = (jd - orbital_elements->epochPerihelion) * mean_motion * 24 * 3600;
+
+        double F0, F1, ratio = 0.5;
+        F0 = M_hyperbolic;
+        for (int j = 0; ((j < 50) && (ratio > 1e-8)); j++) {
+            F1 = (M_hyperbolic + e * (F0 * cosh(F0) - sinh(F0))) / (e * cosh(F0) - 1); // Newton's method
+            ratio = fabs(F1 / F0);
+            if (ratio < 1) ratio = 1 / ratio;
+            ratio -= 1;
+            F0 = F1;
+        }
+
+        v = 2 * atan(sqrt((e + 1) / (e - 1))) * tanh(F0 / 2);
+        r = a * (1 - e * e) / (1 + e * cos(v));
+    } else if (e < 0.98) {
+        double E0, E1, ratio = 0.5;
         E0 = M + e * sin(M) * (1.0 + e * cos(M));
 
         // Iteratively solve inverse Kepler's equation for eccentric anomaly
-        for (j = 0; ((j < 50) && (ratio > 1e-8)); j++) {
+        for (int j = 0; ((j < 50) && (ratio > 1e-8)); j++) {
             E1 = E0 + (M + e * sin(E0) - E0) / (1 - e * cos(E0)); // Newton's method
             ratio = fabs(E1 / E0);
             if (ratio < 1) ratio = 1 / ratio;
@@ -890,6 +906,9 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
         v = atan2(yv, xv);
         r = sqrt(gsl_pow_2(xv) + gsl_pow_2(yv));
     } else {
+        // Near-parabolic orbit
+        // See <https://stjarnhimlen.se/comp/ppcomp.html> section 19
+
         const double k = 0.01720209895;
         const double q = a * (1 - e);
         const double ddt = (jd - orbital_elements->epochPerihelion);
