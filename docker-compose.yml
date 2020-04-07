@@ -1,0 +1,5 @@
+version: '3'
+services:
+  ephmeris-compute:
+    build: .
+    image: ephmeris-compute:v1
