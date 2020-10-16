@@ -39,29 +39,29 @@
 #include "orbitalElements.h"
 #include "magnitudeEstimate.h"
 
-//! The number of the JPL ephemeris we are using: DE405
-static int JPL_EphemNumber = 405;
+//! The number of the JPL ephemeris we are using: DE430
+static int JPL_EphemNumber = 430;
 
-//! The starting year of the DE405 ephemeris
-static int JPL_ASCII_first = 1600;
+//! The starting year of the DE430 ephemeris
+static int JPL_ASCII_first = 1550;
 
-//! The end year of the DE405 ephemeris
-static int JPL_ASCII_last = 2200;
+//! The end year of the DE430 ephemeris
+static int JPL_ASCII_last = 2650;
 
 //! The number of years within each discrete file
-static int JPL_ASCII_step = 20;
+static int JPL_ASCII_step = 100;
 
-//! Storage for data read from DE405
-static double JPL_EphemStart = 0; // The Julian day number of the start of the DE405 ephemeris
-static double JPL_EphemEnd = 0; // The Julian day number of the end of the DE405 ephemeris
-static double JPL_EphemStep = 0; // The number of days represented by each data block in DE405 (32 days)
+//! Storage for data read from DE430
+static double JPL_EphemStart = 0; // The Julian day number of the start of the DE430 ephemeris
+static double JPL_EphemEnd = 0; // The Julian day number of the end of the DE430 ephemeris
+static double JPL_EphemStep = 0; // The number of days represented by each data block in DE430 (32 days)
 static int JPL_EphemArrayLen = 0; // Length of a data record containing Chebyshev coefficients for all planets for time interval JPL_EphemStep
 static int *JPL_ShapeData = NULL; // The 13x3 shape array defined in GROUP 1050 in the header file
 static dict *JPL_EphemVars = NULL; // The metadata variables about the ephemeris, defined in GROUP 1040/1041
 static int JPL_EphemArrayRecords = 0; // The number of blocks needed to go from EphemStart to EphemEnd at step size EphemStep
 
 static int JPL_EphemData_offset = -1; // The offset of the start of the ephmeris binary data from the start of the binary file
-static FILE *JPL_EphemFile = NULL; // File pointer used to read binary data from DE405 (we don't read whole binary ephemeris into memory)
+static FILE *JPL_EphemFile = NULL; // File pointer used to read binary data from DE430 (we don't read whole binary ephemeris into memory)
 
 static double *JPL_EphemData = NULL; // Buffer to hold the ephemeris data, as we load it
 static unsigned char *JPL_EphemData_items_loaded = NULL; // Record of which ephemeris data records we have loaded
@@ -69,7 +69,7 @@ static unsigned char *JPL_EphemData_items_loaded = NULL; // Record of which ephe
 static double JPL_AU = 0.0; // astronomical unit, measured in km
 
 
-//! JPL_ReadBinaryData - restore DE405 from a binary dump of the data in <data/dcfbinary.405>, to save parsing
+//! JPL_ReadBinaryData - restore DE430 from a binary dump of the data in <data/dcfbinary.430>, to save parsing
 //! original files every time we are run.
 
 int JPL_ReadBinaryData() {
@@ -147,7 +147,7 @@ int JPL_ReadBinaryData() {
     return 0;
 }
 
-//! JPL_DumpBinaryData - dump contents of DE405 to a binary dump in <data/dcfbinary.405>, to save parsing
+//! JPL_DumpBinaryData - dump contents of DE430 to a binary dump in <data/dcfbinary.430>, to save parsing
 //! original files every time we are run.
 
 void JPL_DumpBinaryData() {
@@ -176,7 +176,7 @@ void JPL_DumpBinaryData() {
     }
 }
 
-//! jpl_readData - Read the data contained in the original DE405 files
+//! jpl_readData - Read the data contained in the original DE430 files
 
 void jpl_readAsciiData() {
     char fname[FNAME_LENGTH], line[FNAME_LENGTH], *lineptr, key[FNAME_LENGTH];
@@ -199,13 +199,13 @@ void jpl_readAsciiData() {
     // don't exist.
     if (JPL_ReadBinaryData() == 0) return;
 
-    // Logging message to report that we are parsing the DE405 files
+    // Logging message to report that we are parsing the DE430 files
     if (DEBUG) {
         snprintf(temp_err_string, FNAME_LENGTH, "Beginning to read JPL epemeris DE%d.", JPL_EphemNumber);
         ephem_log(temp_err_string);
     }
 
-    // The header file, <data/header.405>, contains global information about the ephemeris
+    // The header file, <data/header.430>, contains global information about the ephemeris
     snprintf(fname, FNAME_LENGTH, "%s/../data/header.%d", SRCDIR, JPL_EphemNumber);
 
     while (1) {
@@ -214,8 +214,8 @@ void jpl_readAsciiData() {
             // If we already have an ephemeris file open, close it
             if (input != NULL) fclose(input);
 
-            // If we've reached the end of the time span of DE405, we're finished
-            if (year > JPL_ASCII_last) break;
+            // If we've reached the end of the time span of DE430, we're finished
+            if (year >= JPL_ASCII_last) break;
 
             // If we've not started reading yet, start at the beginning, otherwise advance 20 years
             if (year == -1) year = JPL_ASCII_first;
@@ -235,7 +235,7 @@ void jpl_readAsciiData() {
             }
 
             // Populate <fname> with the filename of the next ephemeris file to read
-            // The ephemeris data is contained in files <data/ascp????.405>, where ???? is the start year
+            // The ephemeris data is contained in files <data/ascp????.430>, where ???? is the start year
             snprintf(fname, FNAME_LENGTH, "%s/../data/ascp%d.%d", SRCDIR, year, JPL_EphemNumber);
         }
 
@@ -384,10 +384,18 @@ void jpl_readAsciiData() {
             lineptr = line;
             while (lineptr[0] != '\0') {
                 if (pos >= var_dict_len) {
+                    // Skip final terminating zero
+                    double value = get_float(lineptr, NULL);
+                    if (value == 0) {
+                        lineptr = next_word(lineptr);
+                        continue;
+                    }
+
+                    // Otherwise throw error if we have too many values
                     ephem_fatal(__FILE__, __LINE__, "Variable dictionary overflow.");
                     exit(1);
                 }
-                var_val[pos++] = (int) get_float(lineptr, NULL);
+                var_val[pos++] = get_float(lineptr, NULL);
                 lineptr = next_word(lineptr);
             }
         } else if (state == 1050) {
@@ -486,7 +494,7 @@ void jpl_readAsciiData() {
         ephem_log(temp_err_string);
     }
 
-    // Now that we've parsed the text-based DE405 files that we downloaded, we dump the data in binary format
+    // Now that we've parsed the text-based DE430 files that we downloaded, we dump the data in binary format
     JPL_DumpBinaryData();
 
     // Make table indicating that we have loaded all of the ephemeris data
@@ -521,7 +529,7 @@ double chebyshev(double *coeffs, int Ncoeff, double x) {
 }
 
 //! jpl_computeXYZ - Evaluate the 3D position of a solar system body at Julian day number JD
-//! \param [in] body_id - The body's index within DE405 (0 Sun - 12 Pluto)
+//! \param [in] body_id - The body's index within DE430 (0 Sun - 12 Pluto)
 //! \param [in] jd - Julian day number; TT
 //! \param [out] x - Cartesian position of body (AU). This axis points away from RA=0.
 //! \param [out] y - Cartesian position of body (AU).
@@ -533,17 +541,17 @@ void jpl_computeXYZ(int body_id, double jd, double *x, double *y, double *z) {
 
 #pragma omp critical (jpl_init)
     {
-        // If we haven't already loaded DE405 data, make sure we have done so now
+        // If we haven't already loaded DE430 data, make sure we have done so now
         if (JPL_EphemFile == NULL) jpl_readAsciiData();
     }
 
-    // If this query falls outside the time span of DE405, then reject the query
+    // If this query falls outside the time span of DE430, then reject the query
     if ((JPL_EphemFile == NULL) || (jd < JPL_EphemStart) || (jd > JPL_EphemEnd)) {
         *x = *y = *z = GSL_NAN;
         return;
     }
 
-    // Work out which block within DE405 this query falls within
+    // Work out which block within DE430 this query falls within
     record_index = floor((jd - JPL_EphemStart) / JPL_EphemStep);
 
     // Clip block number within allowed range
@@ -618,7 +626,7 @@ void jpl_computeXYZ(int body_id, double jd, double *x, double *y, double *z) {
 }
 
 //! jpl_computeEphemeris - Main entry point for estimating the position, brightness, etc of an object at a particular
-//! time, using data from the DE405 ephemeris.
+//! time, using data from the DE430 ephemeris.
 //! \param [in] i - Global settings used by ephemerisCompute
 //! \param [in] bodyId - The object ID number we want to query. 0=Mercury. 2=Earth/Moon barycentre. 9=Pluto. 10=Sun, etc
 //! \param [in] jd - The Julian Day number to query; TT
@@ -653,7 +661,7 @@ void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double 
     int is_moon = 0, is_earth = 0, is_sun = 0;
 
     // Body 19 is the Earth.
-    // DE405 gives us the Earth/Moon barycentre (body 2), from which we subtract a small fraction of the Moon's
+    // DE430 gives us the Earth/Moon barycentre (body 2), from which we subtract a small fraction of the Moon's
     // offset (body 9) to get the Earth's centre of mass
     if (bodyId == 19) {
         bodyId = 2;
@@ -661,7 +669,7 @@ void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double 
     }
 
     // Body 9 is the Moon.
-    // DE405 gives us a position relative to the Earth/Moon barycentre (body 2), so we add body 2's position
+    // DE430 gives us a position relative to the Earth/Moon barycentre (body 2), so we add body 2's position
     if (bodyId == 9) {
         is_moon = 1;
     }
@@ -671,7 +679,7 @@ void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double 
         is_sun = 1;
     }
 
-    // We give asteroids body numbers which start at 1e6 + 1 (Ceres). These aren't in DE405, so use orbital elements.
+    // We give asteroids body numbers which start at 1e6 + 1 (Ceres). These aren't in DE430, so use orbital elements.
     if (bodyId > 1000000) {
         orbitalElements_computeEphemeris(i, bodyId, jd, x, y, z, ra, dec, mag, phase, angSize, phySize, albedo, sunDist,
                                          earthDist, sunAngDist, theta_ESO, eclipticLongitude, eclipticLatitude,
@@ -679,13 +687,13 @@ void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double 
         return;
     }
 
-    // If we've got a query for a body which isn't in DE405, then we can't proceed
+    // If we've got a query for a body which isn't in DE430, then we can't proceed
     if ((bodyId < 0) || (bodyId > 10)) {
         *x = *y = *z = *ra = *dec = GSL_NAN;
         return;
     }
 
-    // DE405 gives us XYZ coordinates relative to the solar system's centre of mass
+    // DE430 gives us XYZ coordinates relative to the solar system's centre of mass
     // We need to know the Earth's position, in order to convert this to RA and Dec
     // Below are values of GM3 and GMM from DE405. See
     // <https://web.archive.org/web/20120220062549/http://iau-comm4.jpl.nasa.gov/de405iom/de405iom.pdf>
@@ -728,7 +736,7 @@ void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double 
         *z = moon_pos_z;
     }
 
-        // otherwise we need to query DE405 for the particular object the user was looking for
+        // otherwise we need to query DE430 for the particular object the user was looking for
     else {
         jpl_computeXYZ(bodyId, jd, x, y, z);
     }

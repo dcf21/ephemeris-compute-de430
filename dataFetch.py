@@ -84,8 +84,8 @@ def fetch_required_files():
             'force_refresh': True
         },
         {
-            'url': 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/ascii/de405/header.405',
-            'destination': 'data/header.405',
+            'url': 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/ascii/de430/header.430_572',
+            'destination': 'data/header.430',
             'force_refresh': False
         },
         {
@@ -100,11 +100,11 @@ def fetch_required_files():
         }
     ]
 
-    # Fetch the JPL DE405 ephemeris
-    for year in range(1600, 2201, 20):
+    # Fetch the JPL DE430 ephemeris
+    for year in range(1550, 2551, 100):
         required_files.append({
-            'url': 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/ascii/de405/ascp{:04d}.405'.format(year),
-            'destination': 'data/ascp{:04d}.405'.format(year),
+            'url': 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/ascii/de430/ascp{:04d}.430'.format(year),
+            'destination': 'data/ascp{:04d}.430'.format(year),
             'force_refresh': False
         })
 
