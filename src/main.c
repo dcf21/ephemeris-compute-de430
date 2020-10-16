@@ -81,7 +81,7 @@ void compute_ephemeris(settings *s) {
             double sun_dist = 0, earth_dist = 0, sun_ang_dist = 0, theta_eso = 0;
             double ecliptic_longitude = 0, ecliptic_latitude = 0, ecliptic_distance = 0;
 
-            // If the <use_orbital_elements> is 0, we use DE405
+            // If the <use_orbital_elements> is 0, we use DE430
             if (s->use_orbital_elements == 0)
                 jpl_computeEphemeris(s, s->body_id[i], jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size, &phy_size,
                                      &albedo,
@@ -237,7 +237,7 @@ int main(int argc, const char **argv) {
             OPT_INTEGER('r', "output_format", &ephemeris_settings.output_format,
                     "The output format for the ephemeris. See README.md."),
             OPT_INTEGER('o', "use_orbital_elements", &ephemeris_settings.use_orbital_elements,
-                    "Set the either 0 (use DE405) or 2 (use orbital elements)"),
+                    "Set the either 0 (use DE430) or 2 (use orbital elements)"),
             OPT_INTEGER('b', "output_binary", &ephemeris_settings.output_binary,
                     "Set to either 0 (text output) or 1 (binary output)"),
             OPT_INTEGER('c', "output_constellations", &ephemeris_settings.output_constellations,
