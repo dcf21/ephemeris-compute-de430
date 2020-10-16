@@ -1,13 +1,13 @@
-# ephemerisCompute
+# ephemerisCompute (DE405 version)
 
 `ephemerisCompute` is a command-line tool for producing tables of the positions
 of solar system objects over time.
 
 For the Sun, Moon and planets, it extracts positions from the publicly
-available NASA DE405 ephemeris, which covers the time period 1600 to 2200 AD,
-typically with an accuracy of a few km. Outside of this time range, it solves
-Kepler's equation for the position of an object in an elliptical orbit,
-yielding results of much lower accuracy.
+available NASA DE405 ephemeris (published 1997), which covers the time period
+1600 to 2200 AD, typically with an accuracy of a few km. Outside of this time
+range, it solves Kepler's equation for the position of an object in an
+elliptical orbit, yielding results of much lower accuracy.
 
 For asteroids, it solves Kepler's equation using orbital elements downloaded
 from Ted Bowell's `astorb.dat` catalogue.
@@ -16,6 +16,10 @@ For comets, it obtains orbital elements from the Minor Planet Center's website.
 
 `ephemerisCompute` was written to produce all of the ephemerides on the website
 <https://in-the-sky.org>, which is maintained by the author.
+
+A [newer version of this
+tool](https://www.github.com/dcf21/ephemeris-compute-de430) is now available,
+which uses tha NASA DE430 ephemeris (published 2013).
 
 ### Supported operating systems
 
