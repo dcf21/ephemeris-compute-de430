@@ -3,7 +3,7 @@
 # dataFetch.py
 #
 # -------------------------------------------------
-# Copyright 2015-2020 Dominic Ford
+# Copyright 2015-2021 Dominic Ford
 #
 # This file is part of EphemerisCompute.
 #
@@ -25,9 +25,12 @@
 Automatically download all of the required data files from the internet.
 """
 
+import argparse
 import os
 import sys
 import logging
+import urllib.request
+import urllib.error
 
 
 def fetch_file(web_address, destination, force_refresh=False):
@@ -49,7 +52,7 @@ def fetch_file(web_address, destination, force_refresh=False):
     :return:
         Boolean flag indicating whether the file was downloaded. Raises IOError if the download fails.
     """
-    logging.info("Fetching file <{}>".format(destination))
+    logging.info("Fetching <{}>".format(destination))
 
     # Check if the file already exists
     if os.path.exists(destination):
@@ -60,22 +63,73 @@ def fetch_file(web_address, destination, force_refresh=False):
             logging.info("File already exists, but downloading fresh copy.")
             os.unlink(destination)
 
-    # Fetch the file with wget
-    os.system("wget -q '{}' -O {}".format(web_address, destination))
+    # Check whether source URL is gzipped
+    supplied_source_is_gzipped = web_address.endswith(".gz")
+    target_is_gzipped = destination.endswith(".gz")
 
-    # Check that the file now exists
-    if not os.path.exists(destination):
-        raise IOError("Could not download file <{}>".format(web_address))
+    # Try downloading file in both gzipped and uncompressed format, as CDS archive sometimes changes compression
+    for source_is_gzipped in [supplied_source_is_gzipped, not supplied_source_is_gzipped]:
+        # Make source source URL has the right suffix
+        url = web_address
+        if source_is_gzipped and not supplied_source_is_gzipped:
+            url = web_address + ".gz"
+        elif supplied_source_is_gzipped and not source_is_gzipped:
+            url = web_address.strip(".gz")
 
-    return True
+        # Make sure file destination has the right suffix
+        destination_download = destination
+        if source_is_gzipped and not target_is_gzipped:
+            destination_download = destination + ".gz"
+        elif target_is_gzipped and not source_is_gzipped:
+            destination_download = destination.strip(".gz")
+
+        # Fetch the file with wget
+        logging.info("Downloading <{}> to <{}>".format(url, destination_download))
+        try:
+            urllib.request.urlretrieve(url=url, filename=destination_download)
+        except urllib.error.URLError:
+            logging.info("Download failed; attempting alternative URLs")
+            continue
+
+        # Check that the file now exists
+        if not (os.path.exists(destination_download) and os.path.getsize(destination_download) > 0):
+            logging.info("Download failed; attempting alternative URLs")
+            continue
+
+        # Check that file is compressed or uncompressed, as required
+        if source_is_gzipped and not target_is_gzipped:
+            logging.info("Uncompressing to <{}>".format(destination))
+            os.system("gunzip {}".format(destination_download))
+        elif target_is_gzipped and not source_is_gzipped:
+            logging.info("Compressing to <{}>".format(destination))
+            os.system("gzip {}".format(destination_download))
+
+        # Check that the file now exists
+        if not os.path.exists(destination):
+            raise IOError("Failed to create target file. Is gzip/gunzip installed?")
+
+        # Success!
+        return True
+
+    # We didn't manage to download the file...
+    raise IOError("Could not download file <{}>".format(web_address))
 
 
-def fetch_required_files():
+def fetch_required_files(refresh):
+    """
+    Fetch all of the files we require.
+
+    :param refresh:
+        Switch indicating whether to fetch fresh copies of any files we've already downloaded.
+    :type refresh:
+        bool
+    :return:
+    """
     # List of the files we require
     required_files = [
         {
             'url': 'ftp://ftp.lowell.edu/pub/elgb/astorb.dat.gz',
-            'destination': 'data/astorb.dat.gz',
+            'destination': 'data/astorb.dat',
             'force_refresh': True
         },
         {
@@ -86,17 +140,17 @@ def fetch_required_files():
         {
             'url': 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/ascii/de430/header.430_572',
             'destination': 'data/header.430',
-            'force_refresh': False
+            'force_refresh': refresh
         },
         {
             'url': 'http://cdsarc.u-strasbg.fr/ftp/VI/49/bound_20.dat.gz',
-            'destination': 'constellations/bound_20.dat.gz',
-            'force_refresh': False
+            'destination': 'constellations/bound_20.dat',
+            'force_refresh': refresh
         },
         {
             'url': 'http://cdsarc.u-strasbg.fr/ftp/VI/49/ReadMe',
             'destination': 'constellations/ReadMe',
-            'force_refresh': False
+            'force_refresh': refresh
         }
     ]
 
@@ -105,7 +159,7 @@ def fetch_required_files():
         required_files.append({
             'url': 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/ascii/de430/ascp{:04d}.430'.format(year),
             'destination': 'data/ascp{:04d}.430'.format(year),
-            'force_refresh': False
+            'force_refresh': refresh
         })
 
     # Fetch all the files
@@ -115,14 +169,18 @@ def fetch_required_files():
                    force_refresh=required_file['force_refresh']
                    )
 
-    # Unzip the Lowell database of asteroid orbital elements
-    os.system("gunzip -f data/astorb.dat.gz")
-
-    # ... and the constellation boundaries
-    os.system("gunzip -f constellations/bound_20.dat.gz")
-
 
 if __name__ == "__main__":
+    # Read command-line arguments
+    parser = argparse.ArgumentParser(description=__doc__)
+
+    # Add command-line options
+    parser.add_argument('--refresh', dest='refresh', action='store_true', help='Download a fresh copy of all files.')
+    parser.add_argument('--no-refresh', dest='refresh', action='store_false', help='Do not re-download existing files.')
+    parser.set_defaults(refresh=False)
+    args = parser.parse_args()
+
+    # Set up logging
     logging.basicConfig(level=logging.INFO,
                         stream=sys.stdout,
                         format='[%(asctime)s] %(levelname)s:%(filename)s:%(message)s',
@@ -130,4 +188,5 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     logger.info(__doc__.strip())
 
-    fetch_required_files()
+    # Fetch all the data
+    fetch_required_files(refresh=args.refresh)
