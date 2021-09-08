@@ -128,7 +128,7 @@ def fetch_required_files(refresh):
     # List of the files we require
     required_files = [
         {
-            'url': 'ftp://ftp.lowell.edu/pub/elgb/astorb.dat.gz',
+            'url': 'https://ftp.lowell.edu/pub/elgb/astorb.dat.gz',
             'destination': 'data/astorb.dat',
             'force_refresh': True
         },
