@@ -18,7 +18,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with EphemerisCompute.  If not, see <http://www.gnu.org/licenses/>.
+# along with EphemerisCompute.  If not, see <https://www.gnu.org/licenses/>.
 # -------------------------------------------------
 
 """
@@ -29,8 +29,6 @@ import argparse
 import os
 import sys
 import logging
-import urllib.request
-import urllib.error
 
 
 def fetch_file(web_address, destination, force_refresh=False):
@@ -86,8 +84,13 @@ def fetch_file(web_address, destination, force_refresh=False):
         # Fetch the file with wget
         logging.info("Downloading <{}> to <{}>".format(url, destination_download))
         try:
-            urllib.request.urlretrieve(url=url, filename=destination_download)
-        except urllib.error.URLError:
+            # It would be great to use Python's urllib here. But handling connection retries, catching 404 errors,
+            # preserving file timestamps, etc, all has to be done manually. Oh, and if you want a progress bar...
+            status = os.system("wget '{}' -O '{}'".format(url, destination_download))
+            if status != 0:
+                raise IOError("wget returned a non-zero status")
+        except IOError:
+            logging.info("wget returned a non-zero status")
             logging.info("Download failed; attempting alternative URLs")
             continue
 
@@ -138,17 +141,17 @@ def fetch_required_files(refresh):
             'force_refresh': True
         },
         {
-            'url': 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/ascii/de430/header.430_572',
+            'url': 'https://ssd.jpl.nasa.gov/ftp/eph/planets/ascii/de430/header.430_572',
             'destination': 'data/header.430',
             'force_refresh': refresh
         },
         {
-            'url': 'http://cdsarc.u-strasbg.fr/ftp/VI/49/bound_20.dat.gz',
+            'url': 'https://cdsarc.u-strasbg.fr/ftp/VI/49/bound_20.dat.gz',
             'destination': 'constellations/bound_20.dat',
             'force_refresh': refresh
         },
         {
-            'url': 'http://cdsarc.u-strasbg.fr/ftp/VI/49/ReadMe',
+            'url': 'https://cdsarc.u-strasbg.fr/ftp/VI/49/ReadMe',
             'destination': 'constellations/ReadMe',
             'force_refresh': refresh
         }
@@ -157,7 +160,7 @@ def fetch_required_files(refresh):
     # Fetch the JPL DE430 ephemeris
     for year in range(1550, 2551, 100):
         required_files.append({
-            'url': 'ftp://ssd.jpl.nasa.gov/pub/eph/planets/ascii/de430/ascp{:04d}.430'.format(year),
+            'url': 'https://ssd.jpl.nasa.gov/ftp/eph/planets/ascii/de430/ascp{:04d}.430'.format(year),
             'destination': 'data/ascp{:04d}.430'.format(year),
             'force_refresh': refresh
         })
