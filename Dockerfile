@@ -1,5 +1,5 @@
-# Use Python 3.6 running on Debian Buster
-FROM python:3.6-buster
+# Use Python 3.10 running on Debian Bullseye
+FROM python:3.10-bullseye
 
 # Install required libraries
 RUN apt-get update
@@ -12,4 +12,7 @@ ADD . ephemeris-compute
 # Fetch data
 WORKDIR /ephemeris-compute
 RUN /ephemeris-compute/setup.sh
+
+# Check that binary quick-lookup files are generated
+RUN ./bin/ephem.bin
 

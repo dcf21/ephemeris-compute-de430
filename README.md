@@ -29,7 +29,7 @@ Unix-like operating systems.
 ### License
 
 This code is distributed under the Gnu General Public License. It is (C)
-Dominic Ford 2010 - 2020.
+Dominic Ford 2010 - 2021.
 
 ### Set up
 
