@@ -1,7 +1,7 @@
 // magnitudeEstimate.c
 // 
 // -------------------------------------------------
-// Copyright 2015-2020 Dominic Ford
+// Copyright 2015-2022 Dominic Ford
 //
 // This file is part of EphemerisCompute.
 //
@@ -276,7 +276,7 @@ void magnitudeEstimate(int body_id, double xo, double yo, double zo, double xe, 
 
     // Compute RA and Dec from J2000.0 coordinates
     {
-        const double x2 = xo - xe; // Position of object relative to the geocentre
+        const double x2 = xo - xe; // Position of object relative to the geocentre, in J2000.0 coordinates
         const double y2 = yo - ye;
         const double z2 = zo - ze;
         *ra = atan2(y2, x2);

@@ -1,7 +1,7 @@
 // jpl.c
 // 
 // -------------------------------------------------
-// Copyright 2015-2020 Dominic Ford
+// Copyright 2015-2022 Dominic Ford
 //
 // This file is part of EphemerisCompute.
 //
@@ -528,12 +528,12 @@ double chebyshev(double *coeffs, int Ncoeff, double x) {
     return x * d - dd + coeffs[0];
 }
 
-//! jpl_computeXYZ - Evaluate the 3D position of a solar system body at Julian day number JD
+//! jpl_computeXYZ - Evaluate the 3D position of a solar system body at Julian date JD (in ICRF v2 as used by DE430)
 //! \param [in] body_id - The body's index within DE430 (0 Sun - 12 Pluto)
 //! \param [in] jd - Julian day number; TT
 //! \param [out] x - Cartesian position of body (AU). This axis points away from RA=0.
 //! \param [out] y - Cartesian position of body (AU).
-//! \param [out] z - Cartesian position of body (AU). This axis points towards north ecliptic pole
+//! \param [out] z - Cartesian position of body (AU). This axis points towards J2000.0 north celestial pole
 
 void jpl_computeXYZ(int body_id, double jd, double *x, double *y, double *z) {
     int record_index, i;
@@ -629,35 +629,42 @@ void jpl_computeXYZ(int body_id, double jd, double *x, double *y, double *z) {
 //! time, using data from the DE430 ephemeris.
 //! \param [in] i - Global settings used by ephemerisCompute
 //! \param [in] bodyId - The object ID number we want to query. 0=Mercury. 2=Earth/Moon barycentre. 9=Pluto. 10=Sun, etc
-//! \param [in] jd - The Julian Day number to query; TT
-//! \param [out] x - x,y,z position of body, in AU relative to solar system barycentre.
-//! \param [out] y - negative x points to vernal equinox. z points to celestial north pole (i.e. J2000.0).
-//! \param [out] z
-//! \param [out] ra - Right ascension of the object
-//! \param [out] dec - Declination of the object
+//! \param [in] jd - The Julian date to query; TT
+//! \param [out] x - x,y,z position of body, in ICRF v2, in AU, relative to solar system barycentre.
+//! \param [out] y - x points to RA=0. y points to RA=6h.
+//! \param [out] z - z points to celestial north pole (i.e. J2000.0).
+//! \param [out] ra - Right ascension of the object (J2000.0, radians, relative to geocentre)
+//! \param [out] dec - Declination of the object (J2000.0, radians, relative to geocentre)
 //! \param [out] mag - Estimated V-band magnitude of the object
 //! \param [out] phase - Phase of the object (0-1)
-//! \param [out] angSize - Angular size of the object
-//! \param [out] phySize - Physical size of the object
+//! \param [out] angSize - Angular size of the object (arcseconds)
+//! \param [out] phySize - Physical size of the object (metres)
 //! \param [out] albedo - Albedo of the object
-//! \param [out] sunDist - Distance of the object from the Sun
-//! \param [out] earthDist - Distance of the object from the Earth
-//! \param [out] sunAngDist - Angular distance of the object from the Sun, as seen from the Earth
-//! \param [out] theta_ESO - Angular distance of the object from the Earth, as seen from the Sun
-//! \param [out] eclipticLongitude - The ecliptic longitude of the object
-//! \param [out] eclipticLatitude - The ecliptic latitude of the object
-//! \param [out] eclipticDistance - The separation of the object from the Sun, in ecliptic longitude
+//! \param [out] sunDist - Distance of the object from the Sun (AU)
+//! \param [out] earthDist - Distance of the object from the Earth (AU)
+//! \param [out] sunAngDist - Angular distance of the object from the Sun, as seen from the Earth (radians)
+//! \param [out] theta_ESO - Angular distance of the object from the Earth, as seen from the Sun (radians)
+//! \param [out] eclipticLongitude - The ecliptic longitude of the object (J2000.0 radians)
+//! \param [out] eclipticLatitude - The ecliptic latitude of the object (J2000.0 radians)
+//! \param [out] eclipticDistance - The separation of the object from the Sun, in ecliptic longitude (radians)
 
 void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double *y, double *z, double *ra, double *dec,
                           double *mag, double *phase, double *angSize, double *phySize, double *albedo, double *sunDist,
                           double *earthDist, double *sunAngDist, double *theta_ESO, double *eclipticLongitude,
                           double *eclipticLatitude, double *eclipticDistance) {
+    // Position of the Sun relative to the solar system barycentre, J2000.0 equatorial coordinates, AU
     double sun_pos_x, sun_pos_y, sun_pos_z;
-    double EMX, EMY, EMZ; // Position of the Earth-Moon centre of mass
+
+    // Position of the Earth-Moon barycentre, relative to the solar system barycentre, AU
+    double EMX, EMY, EMZ;
+
+    // Moon's position relative to the Earth-Moon barycentre, AU
     double moon_pos_x, moon_pos_y, moon_pos_z;
+
+    // Earth's position relative to the solar system barycentre, J2000.0 equatorial coordinates, AU
     double earth_pos_x, earth_pos_y, earth_pos_z;
 
-    // Boolean flags indicating whether we're dealing with a particular object which needs special treatment
+    // Boolean flags indicating whether this is the Earth, Sun or Moon (which need special treatment)
     int is_moon = 0, is_earth = 0, is_sun = 0;
 
     // Body 19 is the Earth.
@@ -715,29 +722,26 @@ void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double 
     earth_pos_y = EMY - moon_earth_mass_ratio * moon_pos_y;
     earth_pos_z = EMZ - moon_earth_mass_ratio * moon_pos_z;
 
-    // If the user's query was about the Earth, we already know its position
     if (is_earth) {
+        // If the user's query was about the Earth, we already know its position
         *x = earth_pos_x;
         *y = earth_pos_y;
         *z = earth_pos_z;
     }
-
-        // If the user's query was about the Sun, we already know that position too!
     else if (is_sun) {
+        // If the user's query was about the Sun, we already know that position too!
         *x = sun_pos_x;
         *y = sun_pos_y;
         *z = sun_pos_z;
     }
-
-        // If the user's query was about the Moon, we already know that position too!
     else if (is_moon) {
+        // If the user's query was about the Moon, we already know that position too!
         *x = moon_pos_x;
         *y = moon_pos_y;
         *z = moon_pos_z;
     }
-
-        // otherwise we need to query DE430 for the particular object the user was looking for
     else {
+        // ... otherwise we need to query DE430 for the particular object the user was looking for
         jpl_computeXYZ(bodyId, jd, x, y, z);
     }
 
@@ -749,9 +753,8 @@ void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double 
     }
 
     // Populate other quantities, like the brightness, RA and Dec of the object, based on its XYZ position
-    magnitudeEstimate(bodyId, *x, *y, *z, earth_pos_x, earth_pos_y, earth_pos_z, sun_pos_x, sun_pos_y, sun_pos_z, ra,
-                      dec, mag, phase, angSize, phySize,
+    magnitudeEstimate(bodyId, *x, *y, *z, earth_pos_x, earth_pos_y, earth_pos_z,
+                      sun_pos_x, sun_pos_y, sun_pos_z, ra, dec, mag, phase, angSize, phySize,
                       albedo, sunDist, earthDist, sunAngDist, theta_ESO, eclipticLongitude, eclipticLatitude,
                       eclipticDistance, i);
 }
-

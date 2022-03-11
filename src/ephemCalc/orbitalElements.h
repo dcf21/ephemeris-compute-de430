@@ -1,7 +1,7 @@
 // orbitalElements.h
 // 
 // -------------------------------------------------
-// Copyright 2015-2020 Dominic Ford
+// Copyright 2015-2022 Dominic Ford
 //
 // This file is part of EphemerisCompute.
 //
@@ -32,15 +32,15 @@ typedef struct {
     char name[24], name2[24];
     int number;  // bodyId for planets; bodyId-1000000 for asteroids; bodyId-2000000 for comets
     int secureOrbit;  // boolean flag indicating whether orbit is deemed secure
-    double epochOsculation;  // Julian day number
-    double epochPerihelion;  // Julian day number
+    double epochOsculation;  // Julian date
+    double epochPerihelion;  // Julian date
     double absoluteMag;  // Absolute magnitude H
     double meanAnomaly;  // mean anomaly at epoch of osculation; radians
-    double argumentPerihelion;  // argument of perihelion at epoch of osculation; radians
+    double argumentPerihelion;  // argument of perihelion at epoch of osculation; radians; J2000.0
     double argumentPerihelion_dot;  // rate of change; radians per day
-    double longAscNode;  // longitude of ascending node; radians
+    double longAscNode;  // longitude of ascending node; radians; J2000.0
     double longAscNode_dot;  // rate of change; radians per day
-    double inclination;  // radians
+    double inclination;  // radians; J2000.0
     double inclination_dot;  // rate of change; radians per day
     double eccentricity;
     double eccentricity_dot; // rate of change; per day
