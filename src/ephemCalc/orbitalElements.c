@@ -975,7 +975,7 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
         r = q * (1 + gsl_pow_2(w)) / (1 + gsl_pow_2(w) * F);
     }
 
-    // Position of object relative to the solar-system barycenter, in ecliptic coordinates (Eq 8.34)
+    // Position of object relative to the Sun, in ecliptic coordinates (Eq 8.34)
     const double xh_j2000 = r * (cos(N) * cos(v + w) - sin(N) * sin(v + w) * cos(inc));
     const double yh_j2000 = r * (sin(N) * cos(v + w) + cos(N) * sin(v + w) * cos(inc));
     const double zh_j2000 = r * (sin(v + w) * sin(inc));
@@ -983,7 +983,7 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
     // Inclination of the ecliptic at J2000.0 epoch
     const double epsilon = 23.4392794444 * M_PI / 180;
 
-    // Transfer ecliptic coordinates (relative to solar-system barycenter) into J2000.0 coordinates (i.e. ICRF)
+    // Transfer ecliptic coordinates (relative to Sun) into J2000.0 coordinates (i.e. ICRF)
     *x = xh_j2000;
     *y = yh_j2000 * cos(epsilon) - zh_j2000 * sin(epsilon);
     *z = yh_j2000 * sin(epsilon) + zh_j2000 * cos(epsilon);
