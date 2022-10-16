@@ -123,3 +123,8 @@ This section lists the names which are recognised by the `--objects` command-lin
 * `0001P`. Periodic comets may be referred to by their names in the format %4dP
 * `CJ95O010`. Comets may be referred to by their Minor Planet Center designations
 * `C<n>`: Comer number `n`. `n` is the line number within the file [Soft00Cmt.txt](http://www.minorplanetcenter.net/iau/Ephemerides/Comets/Soft00Cmt.txt), downloaded from the Minor Planet Center.
+
+## Author
+
+This code was developed by Dominic Ford <https://dcford.org.uk>. It is distributed under the Gnu General Public License V3.
+
