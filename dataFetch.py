@@ -145,16 +145,16 @@ def fetch_required_files(refresh):
             'destination': 'data/header.430',
             'force_refresh': refresh
         },
-        {
-            'url': 'https://cdsarc.u-strasbg.fr/ftp/VI/49/bound_20.dat.gz',
-            'destination': 'constellations/bound_20.dat',
-            'force_refresh': refresh
-        },
-        {
-            'url': 'https://cdsarc.u-strasbg.fr/ftp/VI/49/ReadMe',
-            'destination': 'constellations/ReadMe',
-            'force_refresh': refresh
-        }
+#       {
+#           'url': 'https://cdsarc.u-strasbg.fr/ftp/VI/49/bound_20.dat.gz',
+#           'destination': 'constellations/bound_20.dat',
+#           'force_refresh': refresh
+#       },
+#       {
+#           'url': 'https://cdsarc.u-strasbg.fr/ftp/VI/49/ReadMe',
+#           'destination': 'constellations/ReadMe',
+#           'force_refresh': refresh
+#       }
     ]
 
     # Fetch the JPL DE430 ephemeris

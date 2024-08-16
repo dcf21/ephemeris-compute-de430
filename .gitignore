@@ -16,7 +16,3 @@ eggs/
 /cmake-build-debug
 /data
 
-# Constellations data
-/constellations/ReadMe
-/constellations/bound_20.dat
-
