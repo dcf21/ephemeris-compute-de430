@@ -29,7 +29,7 @@ Unix-like operating systems.
 ### License
 
 This code is distributed under the Gnu General Public License. It is (C)
-Dominic Ford 2010 - 2022.
+Dominic Ford 2010 - 2024.
 
 ### Set up
 
@@ -47,14 +47,14 @@ provided to build a selection of example starcharts:
 
 ```
 docker compose build
-docker compose run ephmeris-compute-de430
+docker compose run ephemeris-compute-de430
 ```
 
 This produces a single demo ephemeris. To make other ephemerides, open a shell
 within the Docker container as follows:
 
 ```
-docker run -it ephmeris-compute-de430:v1 /bin/bash
+docker run -it ephemeris-compute-de430:v3 /bin/bash
 ```
 
 ### Producing an ephemeris
@@ -123,6 +123,12 @@ This section lists the names which are recognised by the `--objects` command-lin
 * `0001P`. Periodic comets may be referred to by their names in the format %4dP
 * `CJ95O010`. Comets may be referred to by their Minor Planet Center designations
 * `C<n>`: Comer number `n`. `n` is the line number within the file [Soft00Cmt.txt](http://www.minorplanetcenter.net/iau/Ephemerides/Comets/Soft00Cmt.txt), downloaded from the Minor Planet Center.
+
+### Change history
+
+**Version 3.0** (23 Aug 2024) - Added corrections for light travel time and annual aberration. Improvements to numerical stability when calculating hyperbolic orbits.
+
+**Version 2.0** (16 Oct 2022) - Initial public release.
 
 ## Author
 

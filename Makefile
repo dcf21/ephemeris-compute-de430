@@ -1,7 +1,7 @@
 # Makefile for EphemerisCompute
 #
 # -------------------------------------------------
-# Copyright 2015-2020 Dominic Ford
+# Copyright 2015-2024 Dominic Ford
 #
 # This file is part of EphemerisCompute.
 #
@@ -21,8 +21,8 @@
 
 CWD=$(shell pwd)
 
-VERSION = 2.0
-DATE    = 09/06/2019
+VERSION = 3.0
+DATE    = 16/08/2024
 PATHLINK= /
 
 WARNINGS    = -Wall -Wno-format-truncation -Wno-unknown-pragmas

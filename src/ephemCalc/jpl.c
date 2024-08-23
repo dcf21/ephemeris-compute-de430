@@ -1,7 +1,7 @@
 // jpl.c
 // 
 // -------------------------------------------------
-// Copyright 2015-2022 Dominic Ford
+// Copyright 2015-2024 Dominic Ford
 //
 // This file is part of EphemerisCompute.
 //
@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include <gsl/gsl_math.h>
+#include <gsl/gsl_const_mksa.h>
 
 #include "coreUtils/asciiDouble.h"
 #include "coreUtils/errorReport.h"
@@ -32,8 +33,6 @@
 
 #include "listTools/ltDict.h"
 #include "listTools/ltMemory.h"
-
-#include "settings/settings.h"
 
 #include "jpl.h"
 #include "orbitalElements.h"
@@ -128,7 +127,7 @@ int JPL_ReadBinaryData() {
     dcffread((void *) JPL_ShapeData, sizeof(int), 13 * 3, JPL_EphemFile);
 
     // We have now reached the actual ephemeris data. We don't load this into RAM since it is large and this would
-    // take time. Instead store a pointer to the offset of the start of the ephemeris from the beginning of file.
+    // take time. Instead, store a pointer to the offset of the start of the ephemeris from the beginning of file.
     JPL_EphemData_offset = (int) ftell(JPL_EphemFile);
 
     // Allocate memory to use to store ephemeris, as we load it
@@ -667,6 +666,10 @@ void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double 
     // Boolean flags indicating whether this is the Earth, Sun or Moon (which need special treatment)
     int is_moon = 0, is_earth = 0, is_sun = 0;
 
+    double EMX_future, EMY_future, EMZ_future; // Position of the Earth-Moon centre of mass
+    double moon_pos_x_future, moon_pos_y_future, moon_pos_z_future;
+    double earth_pos_x_future, earth_pos_y_future, earth_pos_z_future;
+
     // Body 19 is the Earth.
     // DE430 gives us the Earth/Moon barycentre (body 2), from which we subtract a small fraction of the Moon's
     // offset (body 9) to get the Earth's centre of mass
@@ -708,9 +711,6 @@ void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double 
     const double moon_mass = 0.1093189565989898e-10;
     const double moon_earth_mass_ratio = moon_mass / (moon_mass + earth_mass);
 
-    // Look up the Sun's position
-    jpl_computeXYZ(10, jd, &sun_pos_x, &sun_pos_y, &sun_pos_z);
-
     // Look up the Earth-Moon centre of mass position
     jpl_computeXYZ(2, jd, &EMX, &EMY, &EMZ);
 
@@ -722,39 +722,98 @@ void jpl_computeEphemeris(settings *i, int bodyId, double jd, double *x, double 
     earth_pos_y = EMY - moon_earth_mass_ratio * moon_pos_y;
     earth_pos_z = EMZ - moon_earth_mass_ratio * moon_pos_z;
 
+    // Look up the Sun's position, taking light travel time into account
+    {
+        jpl_computeXYZ(10, jd, &sun_pos_x, &sun_pos_y, &sun_pos_z);
+
+        // Calculate light travel time
+        const double distance = gsl_hypot3(sun_pos_x - earth_pos_x,
+                                           sun_pos_y - earth_pos_y,
+                                           sun_pos_z - earth_pos_z);  // AU
+        const double light_travel_time = distance * GSL_CONST_MKSA_ASTRONOMICAL_UNIT / GSL_CONST_MKSA_SPEED_OF_LIGHT;
+
+        // Look up position of requested object at the time the light left the object
+        jpl_computeXYZ(10, jd - light_travel_time / 86400, &sun_pos_x, &sun_pos_y, &sun_pos_z);
+    }
+
+    // If the user's query was about the Earth, we already know its position
     if (is_earth) {
-        // If the user's query was about the Earth, we already know its position
         *x = earth_pos_x;
         *y = earth_pos_y;
         *z = earth_pos_z;
     }
+
+        // If the user's query was about the Sun, we already know that position too
     else if (is_sun) {
-        // If the user's query was about the Sun, we already know that position too!
         *x = sun_pos_x;
         *y = sun_pos_y;
         *z = sun_pos_z;
     }
+
+        // If the user's query was about the Moon, we already know that position too
     else if (is_moon) {
-        // If the user's query was about the Moon, we already know that position too!
-        *x = moon_pos_x;
-        *y = moon_pos_y;
-        *z = moon_pos_z;
-    }
-    else {
-        // ... otherwise we need to query DE430 for the particular object the user was looking for
-        jpl_computeXYZ(bodyId, jd, x, y, z);
+        *x = moon_pos_x + earth_pos_x;
+        *y = moon_pos_y + earth_pos_y;
+        *z = moon_pos_z + earth_pos_z;
     }
 
-    // If the body was the Moon, don't forget the add the position of the Earth-Moon centre of mass
-    if (is_moon) {
-        *x += earth_pos_x;
-        *y += earth_pos_y;
-        *z += earth_pos_z;
+        // Otherwise we need to query DE430 for the particular object the user was looking for,
+        // taking light travel time into account
+    else {
+        // Calculate position of requested object at specified time
+        jpl_computeXYZ(bodyId, jd, x, y, z);
+
+        // Calculate light travel time
+        const double distance = gsl_hypot3(*x - earth_pos_x, *y - earth_pos_y, *z - earth_pos_z);  // AU
+        const double light_travel_time = distance * GSL_CONST_MKSA_ASTRONOMICAL_UNIT / GSL_CONST_MKSA_SPEED_OF_LIGHT;
+
+        // Look up position of requested object at the time the light left the object
+        jpl_computeXYZ(bodyId, jd - light_travel_time / 86400, x, y, z);
+    }
+
+    // Look up the Earth-Moon centre of mass position, a short time in the future
+    // We use this to calculate the Earth's velocity vector, which is needed to correct for aberration
+    // (see eqn 7.119 of the Explanatory Supplement)
+    const double eb_dot_timestep = 1e-6; // days
+    const double eb_dot_timestep_sec = eb_dot_timestep * 86400;
+    jpl_computeXYZ(2, jd + eb_dot_timestep, &EMX_future, &EMY_future, &EMZ_future);
+    jpl_computeXYZ(9, jd + eb_dot_timestep, &moon_pos_x_future, &moon_pos_y_future, &moon_pos_z_future);
+    earth_pos_x_future = EMX_future - moon_earth_mass_ratio * moon_pos_x_future;
+    earth_pos_y_future = EMY_future - moon_earth_mass_ratio * moon_pos_y_future;
+    earth_pos_z_future = EMZ_future - moon_earth_mass_ratio * moon_pos_z_future;
+
+    // Equation (7.118) of the Explanatory Supplement - correct for aberration
+    if (!is_earth) {
+        const double u1[3] = {
+                *x - earth_pos_x,
+                *y - earth_pos_y,
+                *z - earth_pos_z
+        };
+        const double u1_mag = gsl_hypot3(u1[0], u1[1], u1[2]);
+        const double u[3] = {u1[0] / u1_mag, u1[1] / u1_mag, u1[2] / u1_mag};
+        const double eb_dot[3] = {
+                earth_pos_x_future - earth_pos_x,
+                earth_pos_y_future - earth_pos_y,
+                earth_pos_z_future - earth_pos_z
+        };
+
+        // Speed of light in AU per time step
+        const double c = GSL_CONST_MKSA_SPEED_OF_LIGHT / GSL_CONST_MKSA_ASTRONOMICAL_UNIT * eb_dot_timestep_sec;
+        const double V[3] = {eb_dot[0] / c, eb_dot[1] / c, eb_dot[2] / c};
+        const double V_mag = gsl_hypot3(V[0], V[1], V[2]);
+        const double beta = sqrt(1 - gsl_pow_2(V_mag));
+        const double f1 = u[0] * V[0] + u[1] * V[1] + u[2] * V[2];
+        const double f2 = 1 + f1 / (1 + beta);
+
+        // Correct for aberration
+        *x = earth_pos_x + (beta * u1[0] + f2 * u1_mag * V[0]) / (1 + f1);
+        *y = earth_pos_y + (beta * u1[1] + f2 * u1_mag * V[1]) / (1 + f1);
+        *z = earth_pos_z + (beta * u1[2] + f2 * u1_mag * V[2]) / (1 + f1);
     }
 
     // Populate other quantities, like the brightness, RA and Dec of the object, based on its XYZ position
-    magnitudeEstimate(bodyId, *x, *y, *z, earth_pos_x, earth_pos_y, earth_pos_z,
-                      sun_pos_x, sun_pos_y, sun_pos_z, ra, dec, mag, phase, angSize, phySize,
+    magnitudeEstimate(bodyId, *x, *y, *z, earth_pos_x, earth_pos_y, earth_pos_z, sun_pos_x, sun_pos_y, sun_pos_z, ra,
+                      dec, mag, phase, angSize, phySize,
                       albedo, sunDist, earthDist, sunAngDist, theta_ESO, eclipticLongitude, eclipticLatitude,
                       eclipticDistance, i);
 }

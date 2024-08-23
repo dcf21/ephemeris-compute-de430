@@ -1,7 +1,7 @@
 // constellations.c
 // 
 // -------------------------------------------------
-// Copyright 2015-2022 Dominic Ford
+// Copyright 2015-2024 Dominic Ford
 //
 // This file is part of EphemerisCompute.
 //
@@ -58,7 +58,8 @@ typedef struct {
 } constel_desc;
 
 //! constel_desc constel_data - Storage for the 88 constellations which make up the night sky
-static constel_desc constel_data[90];
+#define MAX_CONSTELLATIONS 90
+static constel_desc constel_data[MAX_CONSTELLATIONS];
 
 //! Nconstel - A counter for the number of constellations we have loaded so far
 static int Nconstel = 0;
@@ -94,7 +95,8 @@ static double dWind(double RA, double Dec, double RA0, double Dec0, double RA1, 
     double xC1 = xB1;
     double yC0 = yB0 * cos(-a) + zB0 * sin(-a);
     double yC1 = yB1 * cos(-a) + zB1 * sin(-a);
-//double zC0 = yB0*sin(  a) + zB0*cos(- a);      double zC1 = yB1*sin(  a) + zB1*cos(- a);
+    // double zC0 = yB0*sin(  a) + zB0*cos(- a);
+    // double zC1 = yB1*sin(  a) + zB1*cos(- a);
 
     double dW;
 
@@ -108,15 +110,25 @@ static double dWind(double RA, double Dec, double RA0, double Dec0, double RA1, 
 
 void constellations_init() {
     FILE *file;
-    int i;
-    char line[FNAME_LENGTH], *scan, constellation[6] = "@@@";
+    char line[FNAME_LENGTH], *scan;
+    char constellation[6] = "@@@"; // Name of constellation we're currently reading in
 
-    Nconstel = 0;
+    Nconstel = 0; // Constellation counter. NB: This is 1 when we're reading in constel_data[0]
 
-    // Scan through catalogue of bound
-    file = fopen(SRCDIR "../constellations/bound_20.dat", "r");
-    if (file == NULL) ephem_fatal(__FILE__, __LINE__, "Could not open constellation boundary data");
+    // Scan through catalogue of constellation boundaries
+    {
+        char in_path[FNAME_LENGTH];
+        snprintf(in_path, FNAME_LENGTH, "%s", SRCDIR "../constellations/bound_20.dat");
+        file = fopen(in_path, "r");
+        if (file == NULL) {
+            char buffer[LSTR_LENGTH];
+            snprintf(buffer, LSTR_LENGTH, "Could not open constellation boundary data from <%s>.", in_path);
+            ephem_fatal(__FILE__, __LINE__, buffer);
+            exit(1);
+        }
+    }
 
+    // Loop over lines of constellation boundary data
     while ((!feof(file)) && (!ferror(file))) {
         double ra, dec;
         file_readline(file, line);
@@ -129,15 +141,25 @@ void constellations_init() {
         dec = get_float(scan, NULL);
         if (line[11] == '-') dec = -dec;
 
+        // If constellation name has changed since previous entry, we have a new constellation.
         if (strncmp(line + 23, constellation, 4) != 0) {
-            Nconstel++;
+            Nconstel++; // Advance constellation counter
+
+            // Check for data structure overflow
+            if (Nconstel >= MAX_CONSTELLATIONS) {
+                ephem_fatal(__FILE__, __LINE__, "Too many constellations; bound_20.dat is probably corrupted.");
+            }
+
+            // Initialise new constellation data structure
+            // Note -1 because Nconstel is 1 when reading first record, etc
             constel_data[Nconstel - 1].ShortNameSet = 1;
             constel_data[Nconstel - 1].LongNameSet = 0;
             constel_data[Nconstel - 1].Npoints = 0;
-            strncpy(constel_data[Nconstel - 1].ShortName, line + 23, 4);
-            constel_data[Nconstel - 1].ShortName[5] = '\0';
-            strncpy(constellation, line + 23, 4);
-            constellation[5] = '\0';
+
+            // shortName is 4-letter constellation abbrev
+            // Note, "SER1" has four letter abbrevs. Most are filed as "AND " with trailing space.
+            snprintf(constel_data[Nconstel - 1].ShortName, 5, "%s", line + 23);
+            snprintf(constellation, 5, "%s", line + 23);  // Most are filed as "AND " with trailing space
         }
 
         constel_data[Nconstel - 1].point[constel_data[Nconstel - 1].Npoints].RA = ra / 12. * M_PI;
@@ -148,32 +170,49 @@ void constellations_init() {
     fclose(file);
 
     // Scan through list of full names
-    file = fopen(SRCDIR "../constellations/constellation_names.dat", "r");
-    if (file == NULL) ephem_fatal(__FILE__, __LINE__, "Could not open constellation name data");
+    {
+        char in_path[FNAME_LENGTH];
+        snprintf(in_path, FNAME_LENGTH, "%s", SRCDIR "../constellations/constellation_names.dat");
+        file = fopen(in_path, "r");
+        if (file == NULL) {
+            char buffer[LSTR_LENGTH];
+            snprintf(buffer, LSTR_LENGTH, "Could not open constellation name data from <%s>.", in_path);
+            ephem_fatal(__FILE__, __LINE__, buffer);
+            exit(1);
+        }
+    }
 
     while ((!feof(file)) && (!ferror(file))) {
         char ShortName[6], LongName[64];
         int i, done;
 
-        // Read short/long name pair
+        // Lines take the form:
+        // short_name  long_name
         file_readline(file, line);
         if ((line[0] == '#') || (strlen(line) < 4)) continue; // Comment line
+
+        // Read short name
         scan = line + 0;
         while ((scan[0] > '\0') && (scan[0] <= ' ')) scan++;
         for (i = 0; scan[0] > ' '; i++, scan++) ShortName[i] = *scan;
+
+        // Pad short name to ensure it's 4 characters long to match abbreviation above
         while (i < 4) ShortName[i++] = ' ';
         ShortName[i] = '\0';
+
+        // Read long name
         while ((scan[0] > '\0') && (scan[0] <= ' ')) scan++;
         for (i = 0; scan[0] > ' '; i++, scan++) {
-            if ((*scan < 'a') && (i > 0)) LongName[i++] = '@';
+            if ((*scan < 'a') && (i > 0)) LongName[i++] = ' ';
             LongName[i] = *scan;
         }
         LongName[i] = '\0';
 
-        // Search for entry in constel_data
+        // Search for entry in constel_data with matching abbreviated name
         for (done = i = 0; i < Nconstel; i++) {
             if (!constel_data[i].ShortNameSet) ephem_fatal(__FILE__, __LINE__, "ShortName of constellation not set");
             if (strcmp(ShortName, constel_data[i].ShortName) == 0) {
+                // If we've found constellation with matching abbreviation, insert it's long name into record
                 strcpy(constel_data[i].LongName, LongName);
                 constel_data[i].LongNameSet = 1;
                 done = 1;
@@ -186,7 +225,7 @@ void constellations_init() {
         }
     }
 
-    for (i = 0; i < Nconstel; i++)
+    for (int i = 0; i < Nconstel; i++)
         if (!constel_data[i].LongNameSet) {
             sprintf(temp_err_string, "Could not find long name for constellation'%s'", constel_data[i].ShortName);
             ephem_fatal(__FILE__, __LINE__, temp_err_string);

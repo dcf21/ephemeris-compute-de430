@@ -1,9 +1,12 @@
-# Use Python 3.10 running on Debian Bullseye
-FROM python:3.10-bullseye
+# Use Python 3.12 running on Ubuntu 24.04
+FROM ubuntu:24.04
 
 # Install required libraries
 RUN apt-get update
-RUN apt-get install -y wget gzip libgsl-dev ; apt-get clean
+RUN apt-get install -y apt-utils dialog file git vim python3 python3-dev \
+                       build-essential make gcc wget gzip libgsl-dev \
+                       pkg-config \
+                       ; apt-get clean
 
 # Copy code into container
 WORKDIR /
@@ -11,6 +14,7 @@ ADD . ephemeris-compute
 
 # Fetch data
 WORKDIR /ephemeris-compute
+RUN /ephemeris-compute/prettymake clean
 RUN /ephemeris-compute/setup.sh
 
 # Check that binary quick-lookup files are generated

@@ -1,7 +1,7 @@
 // orbitalElements.c
 // 
 // -------------------------------------------------
-// Copyright 2015-2022 Dominic Ford
+// Copyright 2015-2024 Dominic Ford
 //
 // This file is part of EphemerisCompute.
 //
@@ -483,22 +483,22 @@ void orbitalElements_asteroids_readAsciiData() {
                                                           ((int) floor(tmp)) % 100, 0, 0, 0, &i, temp_err_string);
         line_ptr = next_word(line_ptr);
 
-        // radians; J2000.0
+        // Read mean anomaly -- radians; J2000.0
         asteroid_database[n].meanAnomaly = get_float(line_ptr, NULL) * M_PI / 180;
         line_ptr = next_word(line_ptr);
-        // radians; J2000.0
+        // Read argument of perihelion -- radians; J2000.0
         asteroid_database[n].argumentPerihelion = get_float(line_ptr, NULL) * M_PI / 180;
         line_ptr = next_word(line_ptr);
-        // radians; J2000.0
+        // Read longitude of ascending node -- radians; J2000.0
         asteroid_database[n].longAscNode = get_float(line_ptr, NULL) * M_PI / 180;
         line_ptr = next_word(line_ptr);
-        // radians; J2000.0
+        // Read inclination of orbit -- radians; J2000.0
         asteroid_database[n].inclination = get_float(line_ptr, NULL) * M_PI / 180;
         line_ptr = next_word(line_ptr);
-        // dimensionless
+        // Read eccentricity of orbit -- dimensionless
         asteroid_database[n].eccentricity = get_float(line_ptr, NULL);
         line_ptr = next_word(line_ptr);
-        // AU
+        // Read semi-major axis of orbit -- AU
         asteroid_database[n].semiMajorAxis = get_float(line_ptr, NULL);
     }
     fclose(input);
@@ -621,7 +621,6 @@ void orbitalElements_comets_readAsciiData() {
         while ((line[j] > ' ') && (k < 23)) comet_database[comet_count].name2[k++] = line[j++];
         comet_database[comet_count].name2[k] = '\0';
 
-
         // Read perihelion distance
         perihelion_dist = get_float(line + 31, NULL);
 
@@ -706,7 +705,7 @@ void orbitalElements_comets_readAsciiData() {
     OrbitalElements_DumpBinaryData("dcfbinary.cmt", comet_database, &comet_database_offset,
                                    comet_count, comet_secure_count);
 
-    // Make table indicating that we have loaded all of the orbital elements in this table
+    // Make table indicating that we have loaded all the orbital elements in this table
     comet_database_items_loaded = (unsigned char *) lt_malloc(comet_count * sizeof(unsigned char));
     memset(comet_database_items_loaded, 1, comet_count);
 
@@ -827,8 +826,10 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
 
     double v, r;
 
+    // const double epsilon = (23.4393 - 3.563E-7 * (jd - 2451544.5)) * M_PI / 180;
+
+    // Case 1: Object is a planet
     if (body_id < 1000000) {
-        // Case 1: Object is a planet
         // Planets occupy body numbers 1-19
         const int index = body_id;
 
@@ -844,8 +845,8 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
         orbital_elements = orbitalElements_planets_fetch(index);
     }
 
-    else if (body_id < 2000000) {
         // Case 2: Object is an asteroid
+    else if (body_id < 2000000) {
         // Asteroids occupy body numbers 1e6 - 2e6
         const int index = body_id - 1000000;
 
@@ -861,8 +862,8 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
         orbital_elements = orbitalElements_asteroids_fetch(index);
     }
 
-    else {
         // Case 3: Object is a comet
+    else {
         // Comets occupy body numbers 2e6 - 3e6
         const int index = body_id - 2000000;
 
@@ -1054,6 +1055,10 @@ void orbitalElements_computeEphemeris(settings *i, int bodyId, double jd, double
     // Boolean flags indicating whether this is the Earth, Sun or Moon (which need special treatment)
     int is_moon = 0, is_earth = 0, is_sun = 0;
 
+    double EMX_future, EMY_future, EMZ_future; // Position of the Earth-Moon centre of mass
+    double moon_pos_x_future, moon_pos_y_future, moon_pos_z_future;
+    double earth_pos_x_future, earth_pos_y_future, earth_pos_z_future;
+
     // Earth: Need to convert from Earth/Moon barycentre to geocentre
     if (bodyId == 19) {
         bodyId = 2;
@@ -1071,13 +1076,12 @@ void orbitalElements_computeEphemeris(settings *i, int bodyId, double jd, double
     }
 
     // Look up position of the Earth at this JD, so that we can convert XYZ coordinates relative to Sun into
-    // RA and Dec as observed from the Earth
-    const double earth_mass = 5.9736e24;
-    const double moon_mass = 7.3477e22;
+    // RA and Dec as observed from the Earth.
+    // Below are values of GM3 and GMM from DE405. See
+    // <https://web.archive.org/web/20120220062549/http://iau-comm4.jpl.nasa.gov/de405iom/de405iom.pdf>
+    const double earth_mass = 0.8887692390113509e-9;
+    const double moon_mass = 0.1093189565989898e-10;
     const double moon_earth_mass_ratio = moon_mass / (moon_mass + earth_mass);
-
-    // Look up the Sun's position
-    jpl_computeXYZ(10, jd, &sun_pos_x, &sun_pos_y, &sun_pos_z);
 
     // Look up the Earth-Moon centre of mass position
     jpl_computeXYZ(2, jd, &EMX, &EMY, &EMZ);
@@ -1090,45 +1094,98 @@ void orbitalElements_computeEphemeris(settings *i, int bodyId, double jd, double
     earth_pos_y = EMY - moon_earth_mass_ratio * moon_pos_y;
     earth_pos_z = EMZ - moon_earth_mass_ratio * moon_pos_z;
 
+    // Look up the Sun's position, taking light travel time into account
+    {
+        jpl_computeXYZ(10, jd, &sun_pos_x, &sun_pos_y, &sun_pos_z);
+
+        // Calculate light travel time
+        const double distance = gsl_hypot3(sun_pos_x - earth_pos_x,
+                                           sun_pos_y - earth_pos_y,
+                                           sun_pos_z - earth_pos_z);  // AU
+        const double light_travel_time = distance * GSL_CONST_MKSA_ASTRONOMICAL_UNIT / GSL_CONST_MKSA_SPEED_OF_LIGHT;
+
+        // Look up position of requested object at the time the light left the object
+        jpl_computeXYZ(10, jd - light_travel_time / 86400, &sun_pos_x, &sun_pos_y, &sun_pos_z);
+    }
+
+    // If the user's query was about the Earth, we already know its position
     if (is_earth) {
-        // If the user's query was about the Earth, we already know its position
         *x = earth_pos_x;
         *y = earth_pos_y;
         *z = earth_pos_z;
     }
+
+        // If the user's query was about the Sun, we already know that position too
     else if (is_sun) {
-        // If the user's query was about the Sun, we already know that position too!
         *x = sun_pos_x;
         *y = sun_pos_y;
         *z = sun_pos_z;
     }
+
+        // If the user's query was about the Moon, we already know that position too
     else if (is_moon) {
-        // If the user's query was about the Moon, we already know that position too!
-        *x = moon_pos_x;
-        *y = moon_pos_y;
-        *z = moon_pos_z;
+        *x = moon_pos_x + earth_pos_x;
+        *y = moon_pos_y + earth_pos_y;
+        *z = moon_pos_z + earth_pos_z;
     }
+
+        // Otherwise we need to use the orbital elements for the particular object the user was looking for,
+        // taking light travel time into account
     else {
-        // ... otherwise we need to use the orbital elements for the particular object the user was looking for
+        // Calculate position of requested object at specified time
         orbitalElements_computeXYZ(bodyId, jd, x, y, z);
 
-        // Orbital elements give the position of objects relative to the Sun.
-        // Switch coordinates to be relative to the solar system barycentre
-        *x += sun_pos_x;
-        *y += sun_pos_y;
-        *z += sun_pos_z;
+        // Calculate light travel time
+        const double distance = gsl_hypot3(*x - earth_pos_x, *y - earth_pos_y, *z - earth_pos_z);  // AU
+        const double light_travel_time = distance * GSL_CONST_MKSA_ASTRONOMICAL_UNIT / GSL_CONST_MKSA_SPEED_OF_LIGHT;
+
+        // Look up position of requested object at the time the light left the object
+        orbitalElements_computeXYZ(bodyId, jd - light_travel_time / 86400, x, y, z);
     }
 
-    // If the body was the Moon, don't forget the add the position of the Earth-Moon centre of mass
-    if (is_moon) {
-        *x += earth_pos_x;
-        *y += earth_pos_y;
-        *z += earth_pos_z;
+    // Look up the Earth-Moon centre of mass position, a short time in the future
+    // We use this to calculate the Earth's velocity vector, which is needed to correct for aberration
+    // (see eqn 7.119 of the Explanatory Supplement)
+    const double eb_dot_timestep = 1e-6; // days
+    const double eb_dot_timestep_sec = eb_dot_timestep * 86400;
+    jpl_computeXYZ(2, jd + eb_dot_timestep, &EMX_future, &EMY_future, &EMZ_future);
+    jpl_computeXYZ(9, jd + eb_dot_timestep, &moon_pos_x_future, &moon_pos_y_future, &moon_pos_z_future);
+    earth_pos_x_future = EMX_future - moon_earth_mass_ratio * moon_pos_x_future;
+    earth_pos_y_future = EMY_future - moon_earth_mass_ratio * moon_pos_y_future;
+    earth_pos_z_future = EMZ_future - moon_earth_mass_ratio * moon_pos_z_future;
+
+    // Equation (7.118) of the Explanatory Supplement - correct for aberration
+    if (!is_earth) {
+        const double u1[3] = {
+                *x - earth_pos_x,
+                *y - earth_pos_y,
+                *z - earth_pos_z
+        };
+        const double u1_mag = gsl_hypot3(u1[0], u1[1], u1[2]);
+        const double u[3] = {u1[0] / u1_mag, u1[1] / u1_mag, u1[2] / u1_mag};
+        const double eb_dot[3] = {
+                earth_pos_x_future - earth_pos_x,
+                earth_pos_y_future - earth_pos_y,
+                earth_pos_z_future - earth_pos_z
+        };
+
+        // Speed of light in AU per time step
+        const double c = GSL_CONST_MKSA_SPEED_OF_LIGHT / GSL_CONST_MKSA_ASTRONOMICAL_UNIT * eb_dot_timestep_sec;
+        const double V[3] = {eb_dot[0] / c, eb_dot[1] / c, eb_dot[2] / c};
+        const double V_mag = gsl_hypot3(V[0], V[1], V[2]);
+        const double beta = sqrt(1 - gsl_pow_2(V_mag));
+        const double f1 = u[0] * V[0] + u[1] * V[1] + u[2] * V[2];
+        const double f2 = 1 + f1 / (1 + beta);
+
+        // Correct for aberration
+        *x = earth_pos_x + (beta * u1[0] + f2 * u1_mag * V[0]) / (1 + f1);
+        *y = earth_pos_y + (beta * u1[1] + f2 * u1_mag * V[1]) / (1 + f1);
+        *z = earth_pos_z + (beta * u1[2] + f2 * u1_mag * V[2]) / (1 + f1);
     }
 
     // Populate other quantities, like the brightness, RA and Dec of the object, based on its XYZ position
-    magnitudeEstimate(bodyId, *x, *y, *z, earth_pos_x, earth_pos_y, earth_pos_z,
-                      sun_pos_x, sun_pos_y, sun_pos_z, ra, dec, mag, phase, angSize, phySize,
+    magnitudeEstimate(bodyId, *x, *y, *z, earth_pos_x, earth_pos_y, earth_pos_z, sun_pos_x, sun_pos_y, sun_pos_z, ra,
+                      dec, mag, phase, angSize, phySize,
                       albedo, sunDist, earthDist, sunAngDist, theta_eso, eclipticLongitude, eclipticLatitude,
                       eclipticDistance, i);
 }
