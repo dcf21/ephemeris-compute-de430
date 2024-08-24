@@ -73,17 +73,12 @@ double get_float(const char *str, int *Nchars) {
     if (negative == 1) accumulator *= -1;                         /* Deals with negatives */
 
     if ((str[pos] == 'e') || (str[pos] == 'E') || (str[pos] == 'd') || (str[pos] == 'D'))
-        accumulator *= pow(10.0,
-                           get_float(
-                                   str +
-                                   pos +
-                                   1,
-                                   &pos2)); /* Deals with exponents */
+        accumulator *= pow(10.0, get_float(str + pos + 1, &pos2)); /* Deals with exponents */
 
     if (pos2 > 0) pos += (1 + pos2); // Add on characters taken up by exponent, including one for the 'e' character.
     if (pos == 0) pos = -1; // Alert the user that this was a blank string!
     if (Nchars != NULL) *Nchars = pos;
-    return (accumulator);
+    return accumulator;
 }
 
 //! valid_float - See whether candidate string is a valid float
@@ -144,7 +139,7 @@ char *numeric_display(double in, int N, int sig_fig, int latex) {
     if ((fabs(in) < 1e10) && (fabs(in) > 1e-3)) {
         x = fabs(in);
         AccLevel = x * (1.0 + pow(10, -sig_fig));
-        dp_max = (int)(sig_fig - log10(x));
+        dp_max = (int) (sig_fig - log10(x));
         for (decimal_level = 0; decimal_level < dp_max; decimal_level++)
             if ((x - ((floor(x * pow(10, decimal_level)) / pow(10, decimal_level)) - x)) < AccLevel)break;
         snprintf(format, 16, "%%.%df", decimal_level);
