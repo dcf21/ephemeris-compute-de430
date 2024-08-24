@@ -424,7 +424,8 @@ void orbitalElements_asteroids_readAsciiData() {
 
     // Read through astorb.dat, line by line
     while ((!feof(input)) && (!ferror(input))) {
-        char line[FNAME_LENGTH], *line_ptr;
+        char line[FNAME_LENGTH];
+        const char *line_ptr;
         int n, day_obs_span, obs_count;
         double tmp;
 

@@ -178,7 +178,8 @@ void JPL_DumpBinaryData() {
 //! jpl_readData - Read the data contained in the original DE430 files
 
 void jpl_readAsciiData() {
-    char fname[FNAME_LENGTH], line[FNAME_LENGTH], *lineptr, key[FNAME_LENGTH];
+    char fname[FNAME_LENGTH], line[FNAME_LENGTH], key[FNAME_LENGTH];
+    const char *line_ptr;
 
     FILE *input = NULL;  // The ASCII file we are reading the ephemeris from
     int year = -1;  // The year number in the filename of the ephemeris file we are reading (advances in 20 year steps)
@@ -200,7 +201,7 @@ void jpl_readAsciiData() {
 
     // Logging message to report that we are parsing the DE430 files
     if (DEBUG) {
-        snprintf(temp_err_string, FNAME_LENGTH, "Beginning to read JPL epemeris DE%d.", JPL_EphemNumber);
+        snprintf(temp_err_string, FNAME_LENGTH, "Beginning to read JPL ephemeris DE%d.", JPL_EphemNumber);
         ephem_log(temp_err_string);
     }
 
@@ -248,12 +249,12 @@ void jpl_readAsciiData() {
         // The first line of the header file contains the length of the records in the ephemeris files (NCOEFF=...)
         if (strncmp(line, "KSIZE=", 5) == 0) {
             //KSIZE =
-            lineptr = next_word(line);
-            lineptr = next_word(lineptr);
+            line_ptr = next_word(line);
+            line_ptr = next_word(line_ptr);
 
             //NCOEFF =
-            lineptr = next_word(lineptr);
-            JPL_EphemArrayLen = (int) get_float(lineptr, NULL) + 2; // Two extra floats are JD limits of time step
+            line_ptr = next_word(line_ptr);
+            JPL_EphemArrayLen = (int) get_float(line_ptr, NULL) + 2; // Two extra floats are JD limits of time step
             if (DEBUG) {
                 snprintf(temp_err_string, FNAME_LENGTH, "Each record of length %d floats.", JPL_EphemArrayLen);
                 ephem_log(temp_err_string);
@@ -266,8 +267,8 @@ void jpl_readAsciiData() {
             first = 1;  // This is the first line of this group
             pos = 0;
             count = 0;
-            lineptr = next_word(line);
-            state = (int) get_float(lineptr, NULL);  // Set state to the new GROUP number
+            line_ptr = next_word(line);
+            state = (int) get_float(line_ptr, NULL);  // Set state to the new GROUP number
             if (DEBUG) {
                 snprintf(temp_err_string, FNAME_LENGTH, "Entering GROUP %d.", state);
                 ephem_log(temp_err_string);
@@ -325,10 +326,10 @@ void jpl_readAsciiData() {
         } else if (state == 1030) {
             // Group 1030 has three numbers: the start and end Julian day numbers, and the step size (32 days)
             JPL_EphemStart = get_float(line, NULL);
-            lineptr = next_word(line);
-            JPL_EphemEnd = get_float(lineptr, NULL);
-            lineptr = next_word(lineptr);
-            JPL_EphemStep = get_float(lineptr, NULL);
+            line_ptr = next_word(line);
+            JPL_EphemEnd = get_float(line_ptr, NULL);
+            line_ptr = next_word(line_ptr);
+            JPL_EphemStep = get_float(line_ptr, NULL);
             if (DEBUG) {
                 snprintf(temp_err_string, FNAME_LENGTH, "Ephemeris spans from %.1f to %.1f; stepsize %.1f.",
                          JPL_EphemStart, JPL_EphemEnd, JPL_EphemStep);
@@ -354,16 +355,16 @@ void jpl_readAsciiData() {
             }
 
             // Subsequent lines list the names of the variables in turn
-            lineptr = line;
-            while (lineptr[0] != '\0') {
+            line_ptr = line;
+            while (line_ptr[0] != '\0') {
                 if (pos >= var_dict_len) {
                     ephem_fatal(__FILE__, __LINE__, "Variable dictionary overflow.");
                     exit(1);
                 }
-                for (i = 0; lineptr[i] > ' '; i++) key[i] = lineptr[i];
+                for (i = 0; line_ptr[i] > ' '; i++) key[i] = line_ptr[i];
                 key[i] = '\0';
                 dictAppendPtr(JPL_EphemVars, key, var_val + (pos++), 0, 0, DATATYPE_VOID);
-                lineptr = next_word(lineptr);
+                line_ptr = next_word(line_ptr);
             }
         } else if (state == 1041) {
             // Group 1041 has a list of the values of the variables which are set within the header
@@ -380,13 +381,13 @@ void jpl_readAsciiData() {
             }
 
             // Each subsequent line defines the whitespace separated values of some variables
-            lineptr = line;
-            while (lineptr[0] != '\0') {
+            line_ptr = line;
+            while (line_ptr[0] != '\0') {
                 if (pos >= var_dict_len) {
                     // Skip final terminating zero
-                    double value = get_float(lineptr, NULL);
+                    double value = get_float(line_ptr, NULL);
                     if (value == 0) {
-                        lineptr = next_word(lineptr);
+                        line_ptr = next_word(line_ptr);
                         continue;
                     }
 
@@ -394,13 +395,13 @@ void jpl_readAsciiData() {
                     ephem_fatal(__FILE__, __LINE__, "Variable dictionary overflow.");
                     exit(1);
                 }
-                var_val[pos++] = get_float(lineptr, NULL);
-                lineptr = next_word(lineptr);
+                var_val[pos++] = get_float(line_ptr, NULL);
+                line_ptr = next_word(line_ptr);
             }
         } else if (state == 1050) {
             // GROUP 1050 defines a 13x3 shape array, which we store in <JPL_ShapeData>
-            lineptr = line;
-            for (i = 0; lineptr[0] != '\0'; i++) {
+            line_ptr = line;
+            for (i = 0; line_ptr[0] != '\0'; i++) {
                 if (i >= 13) {
                     ephem_fatal(__FILE__, __LINE__, "Shape array horizontal overflow.");
                     exit(1);
@@ -409,8 +410,8 @@ void jpl_readAsciiData() {
                     ephem_fatal(__FILE__, __LINE__, "Shape array vertical overflow.");
                     exit(1);
                 }
-                JPL_ShapeData[pos + 3 * i] = (int) get_float(lineptr, NULL);
-                lineptr = next_word(lineptr);
+                JPL_ShapeData[pos + 3 * i] = (int) get_float(line_ptr, NULL);
+                line_ptr = next_word(line_ptr);
             }
             pos++;
         } else if (state == 1070) {
@@ -422,8 +423,8 @@ void jpl_readAsciiData() {
             // The following two items within each block are jd_min and jd_max
 
             // Loop over the words on each line of the ephemeris
-            lineptr = line;
-            while (lineptr[0] != '\0') {
+            line_ptr = line;
+            while (line_ptr[0] != '\0') {
                 if (count == 2) {
                     // Once we have read two items from the ephemeris, we have the min and max JD for the first block
                     // Set the variable jd_min for the current block
@@ -464,7 +465,7 @@ void jpl_readAsciiData() {
                 }
 
                 // Read the floating point numbers from the text file into a big array
-                if (!ignore) JPL_EphemData[pos++] = get_float(lineptr, NULL);
+                if (!ignore) JPL_EphemData[pos++] = get_float(line_ptr, NULL);
 
                 // if (DEBUG) {
                 //  if ((pos % JPL_EphemArrayLen) == 2) {
@@ -475,7 +476,7 @@ void jpl_readAsciiData() {
                 //  }
 
                 // Proceed to the next word
-                lineptr = next_word(lineptr);
+                line_ptr = next_word(line_ptr);
 
                 // Count the number of words we have read
                 count++;
