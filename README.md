@@ -40,6 +40,17 @@ list of comets.
 This can be done with the shell script `setup.sh`. The total download size will
 be around 500 MB.
 
+Note that once you have built `ephemerisCompute`, you must not change its location
+within your file system.  During the build process, the absolute path to the
+downloaded data files is stored, and the code will be unable to find these data
+files if their path changes. If you move the code, you must fully rebuild the
+code:
+
+```
+make clean
+./setup.sh
+```
+
 ### Docker container
 
 A `Dockerfile` is provided to build `ephemerisCompute`. A `docker compose` script is
