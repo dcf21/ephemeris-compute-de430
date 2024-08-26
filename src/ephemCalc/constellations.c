@@ -203,7 +203,7 @@ void constellations_init() {
         // Read long name
         while ((scan[0] > '\0') && (scan[0] <= ' ')) scan++;
         for (i = 0; scan[0] > ' '; i++, scan++) {
-            if ((*scan < 'a') && (i > 0)) LongName[i++] = ' ';
+            if ((*scan < 'a') && (i > 0)) LongName[i++] = '@';
             LongName[i] = *scan;
         }
         LongName[i] = '\0';
