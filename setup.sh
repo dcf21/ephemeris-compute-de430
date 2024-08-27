@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # -------------------------------------------------
-# Copyright 2015-2020 Dominic Ford
+# Copyright 2015-2024 Dominic Ford
 #
 # This file is part of EphemerisCompute.
 #
@@ -21,15 +21,21 @@
 
 # Do all of the tasks we need to get the ephemeris computation code up and running
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit
 cwd=`pwd`
 
 # Download all of the data we need from the internet
-echo "Downloading required data files"
-cd ${cwd}
+echo "[`date`] Downloading required data files"
+cd ${cwd} || exit
 ./dataFetch.py
 
+# Delete old binary ephemeris files
+echo "[`date`] Cleaning old binary files"
+cd ${cwd} || exit
+rm -f data/dcfbinary*
+
 # Compile the ephemerisCompute code
-echo "Compiling code"
-cd ${cwd}
+echo "[`date`] Compiling code"
+cd ${cwd} || exit
+./prettymake clean
 ./prettymake
