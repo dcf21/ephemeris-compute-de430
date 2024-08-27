@@ -107,10 +107,10 @@ void settings_process(settings *i) {
             i->body_id[k] = 10;
         else if (((name[0] == 'a') || (name[0] == 'A')) && valid_float(name + 1, NULL)) {
             // Asteroid, e.g. A1
-            i->body_id[k] = 1000000 + (int) get_float(name + 1, NULL);
+            i->body_id[k] = 10000000 + (int) get_float(name + 1, NULL);
         } else if (((name[0] == 'c') || (name[0] == 'C')) && valid_float(name + 1, NULL)) {
             // Comet, e.g. C1 (first in datafile)
-            i->body_id[k] = 2000000 + (int) get_float(name + 1, NULL);
+            i->body_id[k] = 20000000 + (int) get_float(name + 1, NULL);
         } else {
             // Search for comets with matching names
 
@@ -124,7 +124,7 @@ void settings_process(settings *i) {
                 orbitalElements *item = orbitalElements_comets_fetch(index);
 
                 if ((str_cmp_no_case(name, item->name) == 0) || (str_cmp_no_case(name, item->name2) == 0)) {
-                    i->body_id[k] = 2000000 + index;
+                    i->body_id[k] = 20000000 + index;
                     break;
                 }
             }
