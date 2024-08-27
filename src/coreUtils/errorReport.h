@@ -36,6 +36,7 @@ void ephem_report(char *msg);
 
 void ephem_log(char *msg);
 
-void dcffread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+void dcf_fread(void *ptr, size_t size, size_t n_requested, FILE *stream,
+               const char *input_filename, const char *source_file, int source_line);
 
 #endif

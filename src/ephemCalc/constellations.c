@@ -119,7 +119,7 @@ void constellations_init() {
     {
         char in_path[FNAME_LENGTH];
         snprintf(in_path, FNAME_LENGTH, "%s", SRCDIR "../constellations/bound_20.dat");
-        file = fopen(in_path, "r");
+        file = fopen(in_path, "rt");
         if (file == NULL) {
             char buffer[LSTR_LENGTH];
             snprintf(buffer, LSTR_LENGTH, "Could not open constellation boundary data from <%s>.", in_path);
@@ -173,7 +173,7 @@ void constellations_init() {
     {
         char in_path[FNAME_LENGTH];
         snprintf(in_path, FNAME_LENGTH, "%s", SRCDIR "../constellations/constellation_names.dat");
-        file = fopen(in_path, "r");
+        file = fopen(in_path, "rt");
         if (file == NULL) {
             char buffer[LSTR_LENGTH];
             snprintf(buffer, LSTR_LENGTH, "Could not open constellation name data from <%s>.", in_path);

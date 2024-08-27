@@ -55,6 +55,11 @@ extern FILE *planet_database_file;
 extern FILE *asteroid_database_file;
 extern FILE *comet_database_file;
 
+// Filenames of binary files
+extern char planet_database_filename[FNAME_LENGTH];
+extern char asteroid_database_filename[FNAME_LENGTH];
+extern char comet_database_filename[FNAME_LENGTH];
+
 // Blocks of memory used to hold the orbital elements
 extern orbitalElements *planet_database;
 extern orbitalElements *asteroid_database;

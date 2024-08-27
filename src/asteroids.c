@@ -277,7 +277,8 @@ int main(int argc, char **argv) {
 
     // Read contents of the asteroid database
     fseek(asteroid_database_file, asteroid_database_offset, SEEK_SET);
-    dcffread((void *) asteroid_database, sizeof(orbitalElements), asteroid_count, asteroid_database_file);
+    dcf_fread((void *) asteroid_database, sizeof(orbitalElements), asteroid_count, asteroid_database_file,
+              asteroid_database_filename, __FILE__, __LINE__);
     memset(asteroid_database_items_loaded, 1, asteroid_count);
 
     // Malloc arrays for keeping track of solar distance of asteroids
