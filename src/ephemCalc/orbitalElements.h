@@ -22,7 +22,7 @@
 #ifndef ORBITALELEMENTS_H
 #define ORBITALELEMENTS_H 1
 
-#include "settings/settings.h"
+#include "coreUtils/strConstants.h"
 
 #define MAX_ASTEROIDS 1500000
 #define MAX_COMETS     200000
@@ -100,10 +100,12 @@ orbitalElements *orbitalElements_comets_fetch(int index);
 
 void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, double *z);
 
-void orbitalElements_computeEphemeris(settings *i, int bodyId, double jd, double *x, double *y, double *z, double *ra,
+void orbitalElements_computeEphemeris(int bodyId, double jd, double *x, double *y, double *z, double *ra,
                                       double *dec, double *mag, double *phase, double *angSize, double *phySize,
                                       double *albedo, double *sunDist, double *earthDist, double *sunAngDist,
                                       double *theta_eso, double *eclipticLongitude, double *eclipticLatitude,
-                                      double *eclipticDistance);
+                                      double *eclipticDistance, double ra_dec_epoch,
+                                      int do_topocentric_correction,
+                                      double topocentric_latitude, double topocentric_longitude);
 
 #endif

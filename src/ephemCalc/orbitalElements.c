@@ -37,8 +37,6 @@
 
 #include "mathsTools/julianDate.h"
 
-#include "settings/settings.h"
-
 #include "jpl.h"
 #include "orbitalElements.h"
 #include "magnitudeEstimate.h"
@@ -932,8 +930,12 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
         const double M_hyperbolic = (jd - orbital_elements->epochPerihelion) * mean_motion * 24 * 3600;
 
         double F0, F1, ratio = 0.5;
+
+        // Initial guess
         F0 = M_hyperbolic;
-        for (int j = 0; ((j < 50) && (ratio > 1e-8)); j++) {
+
+        // Iteratively solve Kepler's equation
+        for (int j = 0; ((j < 100) && (ratio > 1e-12)); j++) {
             F1 = (M_hyperbolic + e * (F0 * cosh(F0) - sinh(F0))) / (e * cosh(F0) - 1); // Newton's method
             ratio = fabs(F1 / F0);
             if (ratio < 1) ratio = 1 / ratio;
@@ -941,7 +943,7 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
             F0 = F1;
         }
 
-        v = 2 * atan(sqrt((e + 1) / (e - 1))) * tanh(F0 / 2);
+        v = 2 * atan(sqrt((e + 1) / (e - 1)) * tanh(F0 / 2));
         r = a * (1 - e * e) / (1 + e * cos(v));
     } else if (e < 0.98) {
         int j;
@@ -949,7 +951,7 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
         E0 = M + e * sin(M);
 
         // Iteratively solve inverse Kepler's equation for eccentric anomaly
-        for (j = 0; ((j < 50) && (fabs(delta_E) > 1e-12)); j++) {
+        for (j = 0; ((j < 100) && (fabs(delta_E) > 1e-12)); j++) {
             // See Explanatory Supplement to the Astronomical Almanac, eq 8.37
             const double delta_M = M - (E0 - e * sin(E0));
             delta_E = delta_M / (1 - e * cos(E0));
@@ -1035,7 +1037,6 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
 
 //! orbitalElements_computeEphemeris - Main entry point for estimating the position, brightness, etc of an object at
 //! a particular time, using orbital elements.
-//! \param [in] i - Global settings used by ephemerisCompute
 //! \param [in] bodyId - The object ID number we want to query. 0=Mercury. 2=Earth/Moon barycentre. 9=Pluto. 10=Sun, etc
 //! \param [in] jd - The Julian date to query; TT
 //! \param [out] x - x,y,z position of body, in ICRF v2, in AU, relative to solar system barycentre.
@@ -1055,12 +1056,18 @@ void orbitalElements_computeXYZ(int body_id, double jd, double *x, double *y, do
 //! \param [out] eclipticLongitude - The ecliptic longitude of the object (J2000.0 radians)
 //! \param [out] eclipticLatitude - The ecliptic latitude of the object (J2000.0 radians)
 //! \param [out] eclipticDistance - The separation of the object from the Sun, in ecliptic longitude (radians)
+//! \param [in] ra_dec_epoch - The epoch of the RA/Dec coordinates to output. Supply 2451545.0 for J2000.0.
+//! \param [in] do_topocentric_correction - Boolean indicating whether to apply topocentric correction to (ra, dec)
+//! \param [in] topocentric_latitude - Latitude (deg) of observer on Earth, if topocentric correction is applied.
+//! \param [in] topocentric_longitude - Longitude (deg) of observer on Earth, if topocentric correction is applied.
 
-void orbitalElements_computeEphemeris(settings *i, int bodyId, double jd, double *x, double *y, double *z, double *ra,
+void orbitalElements_computeEphemeris(int bodyId, double jd, double *x, double *y, double *z, double *ra,
                                       double *dec, double *mag, double *phase, double *angSize, double *phySize,
                                       double *albedo, double *sunDist, double *earthDist, double *sunAngDist,
                                       double *theta_eso, double *eclipticLongitude, double *eclipticLatitude,
-                                      double *eclipticDistance) {
+                                      double *eclipticDistance, double ra_dec_epoch,
+                                      int do_topocentric_correction,
+                                      double topocentric_latitude, double topocentric_longitude) {
     // Position of the Sun relative to the solar system barycentre, J2000.0 equatorial coordinates, AU
     double sun_pos_x, sun_pos_y, sun_pos_z;
 
@@ -1153,15 +1160,33 @@ void orbitalElements_computeEphemeris(settings *i, int bodyId, double jd, double
         // Otherwise we need to use the orbital elements for the particular object the user was looking for,
         // taking light travel time into account
     else {
-        // Calculate position of requested object at specified time
-        orbitalElements_computeXYZ(bodyId, jd, x, y, z);
+        double x_from_sun, y_from_sun, z_from_sun;
+
+        // Calculate position of requested object at specified time (relative to Sun)
+        orbitalElements_computeXYZ(bodyId, jd, &x_from_sun, &y_from_sun, &z_from_sun);
+
+        // Convert to barycentric coordinates (to match DE430's coordinate system)
+        const double x_barycentric_0 = x_from_sun + sun_pos_x;
+        const double y_barycentric_0 = y_from_sun + sun_pos_y;
+        const double z_barycentric_0 = z_from_sun + sun_pos_z;
 
         // Calculate light travel time
-        const double distance = gsl_hypot3(*x - earth_pos_x, *y - earth_pos_y, *z - earth_pos_z);  // AU
+        const double distance = gsl_hypot3(x_barycentric_0 - earth_pos_x,
+                                           y_barycentric_0 - earth_pos_y,
+                                           z_barycentric_0 - earth_pos_z);  // AU
         const double light_travel_time = distance * GSL_CONST_MKSA_ASTRONOMICAL_UNIT / GSL_CONST_MKSA_SPEED_OF_LIGHT;
 
         // Look up position of requested object at the time the light left the object
-        orbitalElements_computeXYZ(bodyId, jd - light_travel_time / 86400, x, y, z);
+        orbitalElements_computeXYZ(bodyId, jd - light_travel_time / 86400,
+                                   &x_from_sun, &y_from_sun, &z_from_sun);
+        const double x_barycentric_1 = x_from_sun + sun_pos_x;
+        const double y_barycentric_1 = y_from_sun + sun_pos_y;
+        const double z_barycentric_1 = z_from_sun + sun_pos_z;
+
+        // Store result
+        *x = x_barycentric_1;
+        *y = y_barycentric_1;
+        *z = z_barycentric_1;
     }
 
     // Look up the Earth-Moon centre of mass position, a short time in the future
@@ -1208,5 +1233,6 @@ void orbitalElements_computeEphemeris(settings *i, int bodyId, double jd, double
     magnitudeEstimate(bodyId, *x, *y, *z, earth_pos_x, earth_pos_y, earth_pos_z, sun_pos_x, sun_pos_y, sun_pos_z, ra,
                       dec, mag, phase, angSize, phySize,
                       albedo, sunDist, earthDist, sunAngDist, theta_eso, eclipticLongitude, eclipticLatitude,
-                      eclipticDistance, i);
+                      eclipticDistance, ra_dec_epoch, jd,
+                      do_topocentric_correction, topocentric_latitude, topocentric_longitude);
 }

@@ -14,7 +14,7 @@ from Ted Bowell's `astorb.dat` catalogue.
 
 For comets, it obtains orbital elements from the Minor Planet Center's website.
 
-`ephemerisCompute` was written to produce all of the ephemerides on the website
+`ephemerisCompute` was written to produce all the ephemerides on the website
 <https://in-the-sky.org>, which is maintained by the author.
 
 An [older version of this
@@ -65,7 +65,7 @@ This produces a single demo ephemeris. To make other ephemerides, open a shell
 within the Docker container as follows:
 
 ```
-docker run -it ephemeris-compute-de430:v3 /bin/bash
+docker run -it ephemeris-compute-de430:v4 /bin/bash
 ```
 
 ### Producing an ephemeris
@@ -96,6 +96,12 @@ The following command-line arguments can be used to customise the ephemeris:
 * `--jd_max` [float] - Specify the Julian day number at which the ephemeris should end.
 
 * `--jd_step` [float] - Specify the interval between the lines in the ephemeris, in days.
+
+* `--latitude` [float] - The latitude of the observation site (deg); only used if topocentric correction enabled.
+
+* `--longitude` [float] - The longitude of the observation site (deg); only used if topocentric correction enabled.
+
+* `--enable_topocentric_correction` [int] - Set to either 0 (return geocentric coordinates) or 1 (return topocentric coordinates).
 
 * `--epoch` [float] - Specify the epoch of the RA/Dec coordinate system, e.g. 2451545.0 for J2000 (default).
 
@@ -136,6 +142,8 @@ This section lists the names which are recognised by the `--objects` command-lin
 * `C<n>`: Comer number `n`. `n` is the line number within the file [Soft00Cmt.txt](http://www.minorplanetcenter.net/iau/Ephemerides/Comets/Soft00Cmt.txt), downloaded from the Minor Planet Center.
 
 ### Change history
+
+**Version 4.0** (23 Sept 2024) - Added optional topocentric correction.
 
 **Version 3.0** (23 Aug 2024) - Added corrections for light travel time and annual aberration. Improvements to numerical stability when calculating hyperbolic orbits.
 

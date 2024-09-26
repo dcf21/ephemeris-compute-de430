@@ -122,11 +122,12 @@ void scan_for_oppositions(settings *s, double jd_min, double jd_max, double jd_s
                 double earth_dist = 0, sun_ang_dist = 0, theta_eso = 0;
                 double ecliptic_longitude = 0, ecliptic_latitude = 0, ecliptic_distance = 0;
 
-                orbitalElements_computeEphemeris(s, 10000000 + i, jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size,
+                orbitalElements_computeEphemeris(10000000 + i, jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size,
                                                  &phy_size,
                                                  &albedo, &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso,
                                                  &ecliptic_longitude, &ecliptic_latitude,
-                                                 &ecliptic_distance);
+                                                 &ecliptic_distance, s->ra_dec_epoch,
+                                                 0, 0, 0);
 
                 // Check if asteroid is both bright, also at opposition
                 if ((mag < mag_limit) && (loop_iter > 2)) {

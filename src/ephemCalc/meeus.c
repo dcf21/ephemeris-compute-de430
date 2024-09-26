@@ -31,7 +31,6 @@
 //! meeus_computeEphemeris - Main entry point for estimating the position, brightness, etc of an object using the
 //! algorithms in Jean Meeus's Astronomical Algorithms. Unfortunately not implemented yet.
 //!
-//! \param [in] i - Global settings used by ephemerisCompute
 //! \param [in] bodyId - The object ID number we want to query. 0=Mercury. 2=Earth/Moon barycentre. 9=Pluto. 10=Sun, etc
 //! \param [in] JD - The Julian Day number to query; TT
 //! \param [out] x - x,y,z position of body, in AU relative to solar system barycentre.
@@ -51,12 +50,17 @@
 //! \param [out] eclipticLongitude - The ecliptic longitude of the object
 //! \param [out] eclipticLatitude - The ecliptic latitude of the object
 //! \param [out] eclipticDistance - The separation of the object from the Sun, in ecliptic longitude
+//! \param [in] ra_dec_epoch - The epoch of the RA/Dec coordinates to output. Supply 2451545.0 for J2000.0.
+//! \param [in] do_topocentric_correction - Boolean indicating whether to apply topocentric correction to (ra, dec)
+//! \param [in] topocentric_latitude - Latitude (deg) of observer on Earth, if topocentric correction is applied.
+//! \param [in] topocentric_longitude - Longitude (deg) of observer on Earth, if topocentric correction is applied.
 
-void meeus_computeEphemeris(settings *i, int bodyId, double JD, double *x, double *y, double *z, double *ra,
+void meeus_computeEphemeris(int bodyId, double JD, double *x, double *y, double *z, double *ra,
                             double *dec, double *mag, double *phase, double *angSize, double *phySize, double *albedo,
                             double *sunDist, double *earthDist, double *sunAngDist, double *theta_eso,
                             double *eclipticLongitude, double *eclipticLatitude,
-                            double *eclipticDistance) {
+                            double *eclipticDistance, double ra_dec_epoch,
+                            int do_topocentric_correction, double topocentric_latitude, double topocentric_longitude) {
 
     // This is not implemented yet...
 

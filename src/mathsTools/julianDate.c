@@ -236,10 +236,119 @@ void inv_julian_day(double jd, int *year, int *month, int *day, int *hour, int *
     if (year != NULL) *year = (int) floor(d - 4715 - (*month >= 3));
 }
 
-//! jd_from_unix - Convert a unix time into a Julian day number
-//! \param unix_time - Unix time stamp
-//! \return - Julian day number
+//! sidereal_time - Return the Greenwich sidereal time, in hours, at unix time <utc>. This is the RA at the zenith
+//! in Greenwich.
+//! \param [in] utc - Unix time
+//! \return - Sidereal time (hours)
 
-double jd_from_unix(double unix_time) {
-    return unix_time / 86400.0 + 2440587.5;
+double sidereal_time(double utc) {
+    const double u = utc;
+    const double j = 40587.5 + u / 86400.0;  // Julian date - 2400000
+    const double t = (j - 51545.0) / 36525.0; // Julian century (no centuries since 2000.0)
+
+    // See pages 87-88 of Astronomical Algorithms, by Jean Meeus
+    const double st = fmod((
+                                   280.46061837 +
+                                   360.98564736629 * (j - 51545.0) +
+                                   0.000387933 * t * t +
+                                   t * t * t / 38710000.0
+                           ), 360) * 12 / 180;
+
+    // Sidereal time, in hours. RA at zenith in Greenwich.
+    return st;
+}
+
+//! unix_from_jd - Convert a Julian date into a unix time.
+//! \param [in] jd - Input Julian date
+//! \return - Float unix time
+
+double unix_from_jd(double jd) {
+    return 86400.0 * (jd - 2440587.5);
+}
+
+//! jd_from_unix - Convert a unix time into a Julian date.
+//! \param [in] utc - Input unix time
+//! \return - Float Julian date
+
+double jd_from_unix(double utc) {
+    return (utc / 86400.0) + 2440587.5;
+}
+
+//! ra_dec_from_j2000 - Convert celestial coordinates from J2000 into a new epoch. See Green's Spherical Astronomy, pp 222-225
+//! \param [in] ra_j2000_in - Input right ascension, in radians, J2000
+//! \param [in] dec_j2000_in - Input declination, in radians, J2000
+//! \param [in] jd_new - Julian date of the epoch we are to transform celestial coordinates into
+//! \param [out] ra_epoch_out - Output right ascension, in radians, reference frame at epoch
+//! \param [out] dec_epoch_out - Output declination, in radians, reference frame at epoch
+
+void ra_dec_from_j2000(double ra_j2000_in, double dec_j2000_in, double jd_new,
+                       double *ra_epoch_out, double *dec_epoch_out) {
+    const double j = jd_new - 2400000; // Julian date - 2400000
+    const double t = (j - 51545.0) / 36525.0; // Julian century (no centuries since 2000.0)
+
+    const double deg = M_PI / 180;
+    const double m = (1.281232 * t + 0.000388 * t * t) * deg;
+    const double n = (0.556753 * t + 0.000119 * t * t) * deg;
+
+    const double ra_m = ra_j2000_in + 0.5 * (m + n * sin(ra_j2000_in) * tan(dec_j2000_in));
+    const double dec_m = dec_j2000_in + 0.5 * n * cos(ra_m);
+
+    *ra_epoch_out = ra_j2000_in + m + n * sin(ra_m) * tan(dec_m);
+    *dec_epoch_out = dec_j2000_in + n * cos(ra_m);
+}
+
+//! ra_dec_to_j2000 - Convert celestial coordinates to J2000 from another epoch. See Green's Spherical Astronomy, pp 222-225
+//! \param [in] ra_epoch_in - Input right ascension, in radians, reference frame at epoch
+//! \param [in] dec_epoch_in - Input declination, in radians, reference frame at epoch
+//! \param [in] jd_old - Julian date of the epoch we are to transform celestial coordinates from
+//! \param [out] ra_j2000_out - Output right ascension, in radians, J2000
+//! \param [out] dec_j2000_out - Output declination, in radians, J2000
+
+void ra_dec_to_j2000(double ra_epoch_in, double dec_epoch_in, double jd_old,
+                     double *ra_j2000_out, double *dec_j2000_out) {
+    const double j = jd_old - 2400000; // Julian date - 2400000
+    const double t = (j - 51545.0) / 36525.0; // Julian century (no centuries since 2000.0)
+
+    const double deg = M_PI / 180;
+    const double m = (1.281232 * t + 0.000388 * t * t) * deg;
+    const double n = (0.556753 * t + 0.000119 * t * t) * deg;
+
+    const double ra_m = ra_epoch_in - 0.5 * (m + n * sin(ra_epoch_in) * tan(dec_epoch_in));
+    const double dec_m = dec_epoch_in - 0.5 * n * cos(ra_m);
+
+    *ra_j2000_out = ra_epoch_in - m - n * sin(ra_m) * tan(dec_m);
+    *dec_j2000_out = dec_epoch_in - n * cos(ra_m);
+}
+
+//! ra_dec_switch_epoch - Convert celestial coordinates from one epoch into a new epoch. See Green's Spherical Astronomy, pp 222-225
+//! \param [in] ra_epoch_in - Input right ascension, in radians, reference frame at epoch
+//! \param [in] dec_epoch_in - Input declination, in radians, reference frame at epoch
+//! \param [in] jd_epoch_in - Julian date of the epoch we are to transform celestial coordinates from
+//! \param [in] jd_epoch_out - Julian date of the epoch we are to transform celestial coordinates into
+//! \param [out] ra_epoch_out - Output right ascension, in radians, reference frame at epoch
+//! \param [out] dec_epoch_out - Output declination, in radians, reference frame at epoch
+void ra_dec_switch_epoch(double ra_epoch_in, double dec_epoch_in, double jd_epoch_in,
+                         double jd_epoch_out, double *ra_epoch_out, double *dec_epoch_out) {
+    double ra_j2000, dec_j2000;
+    ra_dec_to_j2000(ra_epoch_in, dec_epoch_in, jd_epoch_in, &ra_j2000, &dec_j2000);
+    ra_dec_from_j2000(ra_j2000, dec_j2000, jd_epoch_out, ra_epoch_out, dec_epoch_out);
+}
+
+//! ra_dec_j2000_from_b1950 - Convert celestial coordinates from B1950 into J2000.
+//! \param [in] ra_b1950_in - Input right ascension, in radians, B1950
+//! \param [in] dec_b1950_in - Input declination, in radians, B1950
+//! \param [out] ra_j2000_out - Output right ascension, in radians, J2000
+//! \param [out] dec_j2000_out - Output declination, in radians, J2000
+
+void ra_dec_j2000_from_b1950(double ra_b1950_in, double dec_b1950_in, double *ra_j2000_out, double *dec_j2000_out) {
+    ra_dec_to_j2000(ra_b1950_in, dec_b1950_in, 2433282.4, ra_j2000_out, dec_j2000_out);
+}
+
+//! ra_dec_b1950_from_j2000 - Convert celestial coordinates from J2000 into B1950.
+//! \param [in] ra_j2000_in - Input right ascension, in radians, J2000
+//! \param [in] dec_j2000_in - Input declination, in radians, J2000
+//! \param [out] ra_b1950_out - Output right ascension, in radians, B1950
+//! \param [out] dec_b1950_out - Output declination, in radians, B1950
+void ra_dec_b1950_from_j2000(double ra_j2000_in, double dec_j2000_in, double *ra_b1950_out, double *dec_b1950_out) {
+    ra_dec_from_j2000(ra_j2000_in, dec_j2000_in, 2433282.4, ra_b1950_out, dec_b1950_out);
 }
