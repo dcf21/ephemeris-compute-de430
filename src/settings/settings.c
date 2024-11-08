@@ -46,6 +46,7 @@ void settings_default(settings *i) {
     i->output_binary = 0;
     i->objects_count = 0;
     i->objects_input_list = "jupiter";
+    i->jd_list = NULL;
 }
 
 // Process the contents of a settings structure before producing the ephemeris

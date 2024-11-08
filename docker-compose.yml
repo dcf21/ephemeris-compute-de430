@@ -1,5 +1,5 @@
 services:
   ephemeris-compute-de430:
     build: .
-    image: ephemeris-compute-de430:v4
+    image: ephemeris-compute-de430:v5
     command: ./bin/ephem.bin

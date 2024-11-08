@@ -52,7 +52,7 @@ char *str_underline(const char *in, char *out);
 
 char *str_slice(const char *in, char *out, int start, int end);
 
-char *str_comma_separated_list_scan(char **inscan, char *out);
+char *str_comma_separated_list_scan(const char **inscan, char *out);
 
 int str_cmp_no_case(const char *a, const char *b);
 

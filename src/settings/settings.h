@@ -33,7 +33,7 @@ typedef struct settings {
     int use_orbital_elements, output_binary, output_format, output_constellations;
     int body_id[MAX_OBJECTS];
     char object_name[MAX_OBJECTS][FNAME_LENGTH];
-    const char *objects_input_list;
+    const char *objects_input_list, *jd_list;
     int objects_count;
 } settings;
 

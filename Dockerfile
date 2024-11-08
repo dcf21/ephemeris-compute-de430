@@ -20,4 +20,3 @@ RUN /ephemeris-compute/setup.sh
 
 # Check that binary quick-lookup files are generated
 RUN ./bin/ephem.bin
-

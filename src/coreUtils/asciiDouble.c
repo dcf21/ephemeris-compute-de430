@@ -326,7 +326,7 @@ char *str_slice(const char *in, char *out, int start, int end) {
 //! \param out Character buffer into which to copy a stripped version of the next comma-separated value
 //! \return Pointer to <out>
 
-char *str_comma_separated_list_scan(char **inscan, char *out) {
+char *str_comma_separated_list_scan(const char **inscan, char *out) {
     char *outscan = out;
     while ((**inscan != '\0') && (**inscan != ',')) *(outscan++) = *((*inscan)++);
     if (**inscan == ',') (*inscan)++; // Fast-forward over comma character

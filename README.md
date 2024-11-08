@@ -65,7 +65,7 @@ This produces a single demo ephemeris. To make other ephemerides, open a shell
 within the Docker container as follows:
 
 ```
-docker run -it ephemeris-compute-de430:v4 /bin/bash
+docker run -it ephemeris-compute-de430:v5 /bin/bash
 ```
 
 ### Producing an ephemeris
@@ -96,6 +96,8 @@ The following command-line arguments can be used to customise the ephemeris:
 * `--jd_max` [float] - Specify the Julian day number at which the ephemeris should end.
 
 * `--jd_step` [float] - Specify the interval between the lines in the ephemeris, in days.
+
+* `--jd_list` [string] - Specify an explicit list of Julian day numbers to calculate (optional). If this is specified, this list overrides <jd_min>, <jd_max> and <jd_step>.
 
 * `--latitude` [float] - The latitude of the observation site (deg); only used if topocentric correction enabled.
 
@@ -142,6 +144,8 @@ This section lists the names which are recognised by the `--objects` command-lin
 * `C<n>`: Comer number `n`. `n` is the line number within the file [Soft00Cmt.txt](http://www.minorplanetcenter.net/iau/Ephemerides/Comets/Soft00Cmt.txt), downloaded from the Minor Planet Center.
 
 ### Change history
+
+**Version 5.0** (1 Nov 2024) - Added `--jd_list` command-line option.
 
 **Version 4.0** (23 Sept 2024) - Added optional topocentric correction.
 

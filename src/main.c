@@ -55,6 +55,144 @@ static const char *const usage[] = {
         NULL,
 };
 
+void compute_ephemeris_time_point(const settings *s, FILE *output, const double jd) {
+    // When producing a text-based ephemeris, the first column in Julian day number (TT)
+    // Binary ephemerides have no JD column to save space.
+    if (!s->output_binary) fprintf(output, "%.12f   ", jd);
+
+    // Compute ephemeris
+    int i;
+#pragma omp parallel for shared(output) private(i)
+    for (i = 0; i < s->objects_count; i++) {
+        const int o = i * N_PARAMETERS;
+        double ra = 0, dec = 0, x = 0, y = 0, z = 0;
+        double mag = 0, phase = 0, ang_size = 0, phy_size = 0, albedo = 0;
+        double sun_dist = 0, earth_dist = 0, sun_ang_dist = 0, theta_eso = 0;
+        double ecliptic_longitude = 0, ecliptic_latitude = 0, ecliptic_distance = 0;
+
+        // If the <use_orbital_elements> is 0, we use DE430
+        if (s->use_orbital_elements == 0)
+            jpl_computeEphemeris(s->body_id[i], jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size, &phy_size,
+                                 &albedo,
+                                 &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso, &ecliptic_longitude,
+                                 &ecliptic_latitude, &ecliptic_distance, s->ra_dec_epoch,
+                                 s->enable_topocentric_correction,
+                                 s->latitude, s->longitude);
+
+            // If the <use_orbital_elements> is 2, we use Jean Meeus's algorithms (NOT IMPLEMENTED!!!)
+        else if (s->use_orbital_elements == 2)
+            meeus_computeEphemeris(s->body_id[i], jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size, &phy_size,
+                                   &albedo,
+                                   &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso, &ecliptic_longitude,
+                                   &ecliptic_latitude, &ecliptic_distance, s->ra_dec_epoch,
+                                   s->enable_topocentric_correction,
+                                   s->latitude, s->longitude);
+
+            // If the <use_orbital_elements> is 1, we use orbital elements
+        else if (s->use_orbital_elements == 1)
+            orbitalElements_computeEphemeris(s->body_id[i], jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size,
+                                             &phy_size,
+                                             &albedo, &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso,
+                                             &ecliptic_longitude, &ecliptic_latitude,
+                                             &ecliptic_distance, s->ra_dec_epoch,
+                                             s->enable_topocentric_correction,
+                                             s->latitude, s->longitude);
+
+        // Negative output formats use ecliptic coordinates, not RA and Declination
+        if (s->output_format < 0) {
+            double x2, y2, z2;
+            double epsilon = (23. + 26. / 60. + 21.448 / 3600.) / 180. * M_PI; // Meeus (22.2)
+
+            // negative x-axis points to the vernal equinox; (y,z) get tipped up by 23.5 degrees from (ra,dec)
+            // to equatorial coordinates
+            x2 = x;
+            y2 = cos(epsilon) * y + sin(epsilon) * z;
+            z2 = -sin(epsilon) * y + cos(epsilon) * z;
+            x = x2;
+            y = y2;
+            z = z2;
+        }
+
+        // Convert ecliptic longitude we output to epoch of observation
+        double eclTo_lat, eclTo_lng;
+        precess(2451545.0, jd, ecliptic_longitude, ecliptic_latitude, &eclTo_lng, &eclTo_lat);
+
+        buffer[o + 0] = x;
+        buffer[o + 1] = y;
+        buffer[o + 2] = z;
+        buffer[o + 3] = ra;
+        buffer[o + 4] = dec;
+        buffer[o + 5] = mag;
+        buffer[o + 6] = phase;
+        buffer[o + 7] = ang_size;
+        buffer[o + 8] = phy_size;
+        buffer[o + 9] = albedo;
+        buffer[o + 10] = sun_dist;
+        buffer[o + 11] = earth_dist;
+        buffer[o + 12] = sun_ang_dist;
+        buffer[o + 13] = theta_eso;
+        buffer[o + 14] = eclTo_lng; // ecliptic longitude in epoch of jd, not J2000.0
+        buffer[o + 15] = ecliptic_distance;
+        buffer[o + 16] = eclTo_lat;
+
+        // fix ecliptic longitude for precession of the equinoxes
+        if (buffer[o + 14] > M_PI) buffer[o + 14] -= 2 * M_PI;
+        if (buffer[o + 14] < -M_PI) buffer[o + 14] += 2 * M_PI;
+    }
+
+    // Produce output to file -- loop over objects producing a set of columns for each
+    for (i = 0; i < s->objects_count; i++) {
+        const int o = i * N_PARAMETERS;
+
+        // Produce text-based output
+        if (!s->output_binary) {
+            //-1 - x y z   (ecliptic)
+            // 0 - x y z   (J2000)
+            // 1 - ra dec  (radians)
+            // 2 - x y z ra dec mag phase AngSize
+            // 3 - x y z ra dec mag phase AngSize physical_size albedo
+
+            // Write XYZ coordinates (in all modes but 1)
+            if (s->output_format != 1) {
+                fprintf(output, "%12.9f %12.9f %12.9f   ", buffer[o + 0], buffer[o + 1], buffer[o + 2]);
+            }
+
+            // Write RA and Dec in modes 1,2,3
+            if (s->output_format >= 1) {
+                fprintf(output, "%12.9f %12.9f   ", buffer[o + 3], buffer[o + 4]);
+            }
+
+            // Write magnitude, phase and angular size in modes 2,3
+            if (s->output_format >= 2) {
+                fprintf(output, "%6.3f %7.4f %12.9f   ", buffer[o + 5], buffer[o + 6], buffer[o + 7]);
+            }
+
+            // Write physical size, albedo, sun_dist, earth_dist, sun_ang_dist, theta_edo, eclLng, eclDist, eclLat
+            if (s->output_format >= 3) {
+                fprintf(output, "%12.6e %8.5f %12.9f %12.9f %12.9f %12.9f %12.9f %12.9f %12.9f  ", buffer[o + 8],
+                        buffer[o + 9], buffer[o + 10], buffer[o + 11], buffer[o + 12], buffer[o + 13],
+                        buffer[o + 14], buffer[o + 15], buffer[o + 16]);
+            }
+
+            // Write the name of the constellation the object is in, in the final column
+            if (s->output_constellations) {
+                fprintf(output, "%s ", constellations_fetch(buffer[o + 3], buffer[o + 4]));
+            }
+        }
+
+            // Produce binary output
+        else {
+            if (s->output_format != 1) fwrite((void *) (buffer + o + 0), sizeof(double), 3, output);
+            if (s->output_format >= 1) fwrite((void *) (buffer + o + 3), sizeof(double), 2, output);
+            if (s->output_format >= 2) fwrite((void *) (buffer + o + 5), sizeof(double), 3, output);
+            if (s->output_format >= 3) fwrite((void *) (buffer + o + 8), sizeof(double), 9, output);
+            if (s->output_constellations)
+                fprintf(output, "%s ", constellations_fetch(buffer[o + 3], buffer[o + 4]));
+        }
+    }
+    if (!s->output_binary) fprintf(output, "\n");
+}
+
 // Main entry point to compute an ephemeris, with parameters described by a settings structure
 void compute_ephemeris(settings *s) {
     FILE *output = stdout;
@@ -62,147 +200,22 @@ void compute_ephemeris(settings *s) {
     // Initial processing of settings for this ephemeris
     settings_process(s);
 
-    // Loop over all the time points in the ephemeris
-    const int steps_total = (int) ceil((s->jd_max - s->jd_min) / s->jd_step);
-    for (int step_count = 0; step_count < steps_total; step_count++) {
-        const double jd = s->jd_min + step_count * s->jd_step;  // TT
-
-        // When producing a text-based ephemeris, the first column in Julian day number (TT)
-        // Binary ephemerides have no JD column to save space.
-        if (!s->output_binary) fprintf(output, "%.12f   ", jd);
-
-        // Compute ephemeris
-        int i;
-#pragma omp parallel for shared(output) private(i)
-        for (i = 0; i < s->objects_count; i++) {
-            const int o = i * N_PARAMETERS;
-            double ra = 0, dec = 0, x = 0, y = 0, z = 0;
-            double mag = 0, phase = 0, ang_size = 0, phy_size = 0, albedo = 0;
-            double sun_dist = 0, earth_dist = 0, sun_ang_dist = 0, theta_eso = 0;
-            double ecliptic_longitude = 0, ecliptic_latitude = 0, ecliptic_distance = 0;
-
-            // If the <use_orbital_elements> is 0, we use DE430
-            if (s->use_orbital_elements == 0)
-                jpl_computeEphemeris(s->body_id[i], jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size, &phy_size,
-                                     &albedo,
-                                     &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso, &ecliptic_longitude,
-                                     &ecliptic_latitude, &ecliptic_distance, s->ra_dec_epoch,
-                                     s->enable_topocentric_correction,
-                                     s->latitude, s->longitude);
-
-                // If the <use_orbital_elements> is 2, we use Jean Meeus's algorithms (NOT IMPLEMENTED!!!)
-            else if (s->use_orbital_elements == 2)
-                meeus_computeEphemeris(s->body_id[i], jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size, &phy_size,
-                                       &albedo,
-                                       &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso, &ecliptic_longitude,
-                                       &ecliptic_latitude, &ecliptic_distance, s->ra_dec_epoch,
-                                       s->enable_topocentric_correction,
-                                       s->latitude, s->longitude);
-
-                // If the <use_orbital_elements> is 1, we use orbital elements
-            else if (s->use_orbital_elements == 1)
-                orbitalElements_computeEphemeris(s->body_id[i], jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size,
-                                                 &phy_size,
-                                                 &albedo, &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso,
-                                                 &ecliptic_longitude, &ecliptic_latitude,
-                                                 &ecliptic_distance, s->ra_dec_epoch,
-                                                 s->enable_topocentric_correction,
-                                                 s->latitude, s->longitude);
-
-            // Negative output formats use ecliptic coordinates, not RA and Declination
-            if (s->output_format < 0) {
-                double x2, y2, z2;
-                double epsilon = (23. + 26. / 60. + 21.448 / 3600.) / 180. * M_PI; // Meeus (22.2)
-
-                // negative x-axis points to the vernal equinox; (y,z) get tipped up by 23.5 degrees from (ra,dec)
-                // to equatorial coordinates
-                x2 = x;
-                y2 = cos(epsilon) * y + sin(epsilon) * z;
-                z2 = -sin(epsilon) * y + cos(epsilon) * z;
-                x = x2;
-                y = y2;
-                z = z2;
-            }
-
-            // Convert ecliptic longitude we output to epoch of observation
-            double eclTo_lat, eclTo_lng;
-            precess(2451545.0, jd, ecliptic_longitude, ecliptic_latitude, &eclTo_lng, &eclTo_lat);
-
-
-            buffer[o + 0] = x;
-            buffer[o + 1] = y;
-            buffer[o + 2] = z;
-            buffer[o + 3] = ra;
-            buffer[o + 4] = dec;
-            buffer[o + 5] = mag;
-            buffer[o + 6] = phase;
-            buffer[o + 7] = ang_size;
-            buffer[o + 8] = phy_size;
-            buffer[o + 9] = albedo;
-            buffer[o + 10] = sun_dist;
-            buffer[o + 11] = earth_dist;
-            buffer[o + 12] = sun_ang_dist;
-            buffer[o + 13] = theta_eso;
-            buffer[o + 14] = eclTo_lng; // ecliptic longitude in epoch of jd, not J2000.0
-            buffer[o + 15] = ecliptic_distance;
-            buffer[o + 16] = eclTo_lat;
-
-            // fix ecliptic longitude for precession of the equinoxes
-            if (buffer[o + 14] > M_PI) buffer[o + 14] -= 2 * M_PI;
-            if (buffer[o + 14] < -M_PI) buffer[o + 14] += 2 * M_PI;
+    if (s->jd_list == NULL) {
+        // Loop over all the time points in the ephemeris
+        const int steps_total = (int) ceil((s->jd_max - s->jd_min) / s->jd_step);
+        for (int step_count = 0; step_count < steps_total; step_count++) {
+            const double jd = s->jd_min + step_count * s->jd_step;  // TT
+            compute_ephemeris_time_point(s, output, jd);
         }
-
-        // Produce output to file -- loop over objects producing a set of columns for each
-        for (i = 0; i < s->objects_count; i++) {
-            const int o = i * N_PARAMETERS;
-
-            // Produce text-based output
-            if (!s->output_binary) {
-                //-1 - x y z   (ecliptic)
-                // 0 - x y z   (J2000)
-                // 1 - ra dec  (radians)
-                // 2 - x y z ra dec mag phase AngSize
-                // 3 - x y z ra dec mag phase AngSize physical_size albedo
-
-                // Write XYZ coordinates (in all modes but 1)
-                if (s->output_format != 1) {
-                    fprintf(output, "%12.9f %12.9f %12.9f   ", buffer[o + 0], buffer[o + 1], buffer[o + 2]);
-                }
-
-                // Write RA and Dec in modes 1,2,3
-                if (s->output_format >= 1) {
-                    fprintf(output, "%12.9f %12.9f   ", buffer[o + 3], buffer[o + 4]);
-                }
-
-                // Write magnitude, phase and angular size in modes 2,3
-                if (s->output_format >= 2) {
-                    fprintf(output, "%6.3f %7.4f %12.9f   ", buffer[o + 5], buffer[o + 6], buffer[o + 7]);
-                }
-
-                // Write physical size, albedo, sun_dist, earth_dist, sun_ang_dist, theta_edo, eclLng, eclDist, eclLat
-                if (s->output_format >= 3) {
-                    fprintf(output, "%12.6e %8.5f %12.9f %12.9f %12.9f %12.9f %12.9f %12.9f %12.9f  ", buffer[o + 8],
-                            buffer[o + 9], buffer[o + 10], buffer[o + 11], buffer[o + 12], buffer[o + 13],
-                            buffer[o + 14], buffer[o + 15], buffer[o + 16]);
-                }
-
-                // Write the name of the constellation the object is in, in the final column
-                if (s->output_constellations) {
-                    fprintf(output, "%s ", constellations_fetch(buffer[o + 3], buffer[o + 4]));
-                }
-            }
-
-                // Produce binary output
-            else {
-                if (s->output_format != 1) fwrite((void *) (buffer + o + 0), sizeof(double), 3, output);
-                if (s->output_format >= 1) fwrite((void *) (buffer + o + 3), sizeof(double), 2, output);
-                if (s->output_format >= 2) fwrite((void *) (buffer + o + 5), sizeof(double), 3, output);
-                if (s->output_format >= 3) fwrite((void *) (buffer + o + 8), sizeof(double), 9, output);
-                if (s->output_constellations)
-                    fprintf(output, "%s ", constellations_fetch(buffer[o + 3], buffer[o + 4]));
-            }
+    } else {
+        // Loop over explicit list of time points in the ephemeris
+        const char *scan = s->jd_list;
+        while (*scan != '\0') {
+            char jd_string[FNAME_LENGTH];
+            str_comma_separated_list_scan(&scan, jd_string);
+            const double jd = get_float(jd_string, NULL);
+            compute_ephemeris_time_point(s, output, jd);
         }
-        if (!s->output_binary) fprintf(output, "\n");
     }
 
     if (DEBUG) {
@@ -239,6 +252,8 @@ int main(int argc, const char **argv) {
                       "The Julian day number at which the ephemeris should end; TT"),
             OPT_FLOAT('s', "jd_step", &ephemeris_settings.jd_step,
                       "The interval between the lines in the ephemeris, in days"),
+            OPT_STRING('j', "jd_list", &ephemeris_settings.jd_list,
+                       "The list of Julian day numbers to calculate (optional). If specified, this overrides <jd_min>, <jd_max> and <jd_step>."),
             OPT_FLOAT('l', "latitude", &ephemeris_settings.latitude,
                       "The latitude of the observation site (deg); only used if topocentric correction enabled"),
             OPT_FLOAT('m', "longitude", &ephemeris_settings.longitude,
@@ -247,11 +262,11 @@ int main(int argc, const char **argv) {
                         "Set to either 0 (return geocentric coordinates) or 1 (return topocentric coordinates)"),
             OPT_FLOAT('e', "epoch", &ephemeris_settings.ra_dec_epoch,
                       "The epoch of the RA/Dec coordinate system, e.g. 2451545.0 for J2000"),
-            OPT_INTEGER('r', "output_format", &ephemeris_settings.output_format,
+            OPT_INTEGER('f', "output_format", &ephemeris_settings.output_format,
                         "The output format for the ephemeris. See README.md."),
-            OPT_INTEGER('o', "use_orbital_elements", &ephemeris_settings.use_orbital_elements,
+            OPT_INTEGER('r', "use_orbital_elements", &ephemeris_settings.use_orbital_elements,
                         "Set the either 0 (use DE430) or 1 (use orbital elements)"),
-            OPT_INTEGER('b', "output_binary", &ephemeris_settings.output_binary,
+            OPT_INTEGER('z', "output_binary", &ephemeris_settings.output_binary,
                         "Set to either 0 (text output) or 1 (binary output)"),
             OPT_INTEGER('c', "output_constellations", &ephemeris_settings.output_constellations,
                         "Set to either 0 (no column for constellation names) or 1"),

@@ -22,7 +22,7 @@
 #ifndef MEEUS_H
 #define MEEUS_H 1
 
-void meeus_computeEphemeris(int bodyId, double JD, double *x, double *y, double *z, double *ra,
+void meeus_computeEphemeris(int bodyId, double jd, double *x, double *y, double *z, double *ra,
                             double *dec, double *mag, double *phase, double *angSize, double *phySize, double *albedo,
                             double *sunDist, double *earthDist, double *sunAngDist, double *theta_eso,
                             double *eclipticLongitude, double *eclipticLatitude,
