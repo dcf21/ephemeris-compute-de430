@@ -29,7 +29,7 @@ Unix-like operating systems.
 ### License
 
 This code is distributed under the Gnu General Public License. It is (C)
-Dominic Ford 2010 - 2024.
+Dominic Ford 2010 - 2025.
 
 ### Set up
 
@@ -145,7 +145,7 @@ This section lists the names which are recognised by the `--objects` command-lin
 
 ### Change history
 
-**Version 5.0** (1 Nov 2024) - Added `--jd_list` command-line option.
+**Version 5.0** (7 Jan 2025) - Added `--jd_list` command-line option.
 
 **Version 4.0** (23 Sept 2024) - Added optional topocentric correction.
 
