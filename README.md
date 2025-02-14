@@ -65,7 +65,7 @@ This produces a single demo ephemeris. To make other ephemerides, open a shell
 within the Docker container as follows:
 
 ```
-docker run -it ephemeris-compute-de430:v5 /bin/bash
+docker run -it ephemeris-compute-de430:v6 /bin/bash
 ```
 
 ### Producing an ephemeris
