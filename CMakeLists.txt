@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 project(ephemeris_compute)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -Wall -std=c99 -D SRCDIR='\"${CMAKE_SOURCE_DIR}/src/\"' -D DCFVERSION='\"5.0\"' -D DEBUG=0 -D MEMDEBUG1=0 -D MEMDEBUG2=0")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -Wall -std=c99 -D SRCDIR='\"${CMAKE_SOURCE_DIR}/src/\"' -D DCFVERSION='\"6.0\"' -D DEBUG=0 -D MEMDEBUG1=0 -D MEMDEBUG2=0")
 
 include_directories(src)
 include_directories(src/argparse)

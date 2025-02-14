@@ -145,6 +145,8 @@ This section lists the names which are recognised by the `--objects` command-lin
 
 ### Change history
 
+**Version 6.0** (unreleased) - Fix download links
+
 **Version 5.0** (7 Jan 2025) - Added `--jd_list` command-line option.
 
 **Version 4.0** (23 Sept 2024) - Added optional topocentric correction.
