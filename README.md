@@ -15,7 +15,7 @@ from Ted Bowell's `astorb.dat` catalogue.
 For comets, it obtains orbital elements from the Minor Planet Center's website.
 
 `ephemerisCompute` was written to produce all the ephemerides on the website
-<https://in-the-sky.org>, which is maintained by the author.
+[https://in-the-sky.org](https://in-the-sky.org), which is maintained by the author.
 
 An [older version of this
 tool](https://www.github.com/dcf21/ephemeris-compute-de405) is also available,
@@ -23,13 +23,13 @@ which uses the NASA DE405 ephemeris (published 1997).
 
 ### Supported operating systems
 
-`ephemerisCompute` is written in C and runs in Linux, MacOS, and other
+`ephemerisCompute` is written in C and runs in Linux, MacOS, and most other
 Unix-like operating systems.
 
 ### License
 
-This code is distributed under the Gnu General Public License. It is (C)
-Dominic Ford 2010 - 2025.
+This code is distributed under the Gnu General Public License. It is © Dominic
+Ford 2010 - 2025.
 
 ### Set up
 
@@ -40,11 +40,10 @@ list of comets.
 This can be done with the shell script `setup.sh`. The total download size will
 be around 500 MB.
 
-Note that once you have built `ephemerisCompute`, you must not change its location
-within your file system.  During the build process, the absolute path to the
+Once you have built `ephemerisCompute`, you must not change its location within
+your file system.  During the build process, the absolute path to the
 downloaded data files is stored, and the code will be unable to find these data
-files if their path changes. If you move the code, you must fully rebuild the
-code:
+files if their path changes. If you move the code, you must fully rebuild it:
 
 ```
 make clean
@@ -53,16 +52,15 @@ make clean
 
 ### Docker container
 
-A `Dockerfile` is provided to build `ephemerisCompute`. A `docker compose` script is
-provided to build a selection of example starcharts:
+A `Dockerfile` is provided to build `ephemerisCompute`. A `docker-compose`
+script is provided to build the software and display a single demo ephemeris:
 
 ```
 docker compose build
 docker compose run ephemeris-compute-de430
 ```
 
-This produces a single demo ephemeris. To make other ephemerides, open a shell
-within the Docker container as follows:
+To make other ephemerides, open a shell within the Docker container as follows:
 
 ```
 docker run -it ephemeris-compute-de430:v6 /bin/bash
@@ -70,10 +68,10 @@ docker run -it ephemeris-compute-de430:v6 /bin/bash
 
 ### Producing an ephemeris
 
-Running the command-line tool `bin/ephem.bin` will produce a default ephemeris
-for Jupiter between 2000 Jan 1 and 2000 Feb 1, at midnight each day:
+Running the command-line tool `./bin/ephem.bin` will produce a default
+ephemeris for Jupiter between 2000 Jan 1 and 2000 Feb 1, at midnight each day:
 
-```asm
+```
 dominic@ganymede:~/ephemerisCompute$ ./bin/ephem.bin
 2451544.500000000000    3.996320681  2.730993728  1.073274469
 2451545.500000000000    3.991757746  2.736868431  1.075903739
@@ -145,7 +143,7 @@ This section lists the names which are recognised by the `--objects` command-lin
 
 ### Change history
 
-**Version 6.0** (unreleased) - Fix download links
+**Version 6.0** (23 Feb 2025) - Fix download links and improve documentation.
 
 **Version 5.0** (7 Jan 2025) - Added `--jd_list` command-line option.
 
@@ -157,5 +155,7 @@ This section lists the names which are recognised by the `--objects` command-lin
 
 ## Author
 
-This code was developed by Dominic Ford <https://dcford.org.uk>. It is distributed under the Gnu General Public License V3.
+This code was developed by Dominic Ford
+[https://dcford.org.uk](https://dcford.org.uk). It is distributed under the Gnu
+General Public License V3.
 
