@@ -1,25 +1,30 @@
-# ephemerisCompute (DE430 version)
+# ephemerisCompute (DE4xx version)
 
 `ephemerisCompute` is a command-line tool for producing tables of the positions
 of solar system objects over time.
 
 For the Sun, Moon and planets, it extracts positions from the publicly
-available NASA DE430 ephemeris (published 2013), which covers the time period
-1550 to 2650 AD, typically with an accuracy of a few km. Outside of this time
-range, it solves Kepler's equation for the position of an object in an
+available NASA JPL DE4xx series of ephemerides (DE405, DE430, DE431, DE440 and
+DE441 are all supported). These cover various time periods from AD 1000 to AD
+16000, typically with an accuracy of a few km. Outside of this time range, this
+tool solves Kepler's equation for the position of each object assuming an
 elliptical orbit, yielding results of much lower accuracy.
 
 For asteroids, it solves Kepler's equation using orbital elements downloaded
-from Ted Bowell's `astorb.dat` catalogue.
+from the [Asteroid Orbital Elements
+Database](https://asteroid.lowell.edu/astorb/) (`astorb.dat`) hosted by the
+Lowell Observatory.
 
-For comets, it obtains orbital elements from the Minor Planet Center's website.
+For comets, it obtains orbital elements from the [Minor Planet
+Center](https://www.minorplanetcenter.net/data)'s website.
 
 `ephemerisCompute` was written to produce all the ephemerides on the website
-[https://in-the-sky.org](https://in-the-sky.org), which is maintained by the author.
+[https://in-the-sky.org](https://in-the-sky.org), which is maintained by the
+author.
 
 An [older version of this
 tool](https://www.github.com/dcf21/ephemeris-compute-de405) is also available,
-which uses the NASA DE405 ephemeris (published 1997).
+which exclusively uses the NASA DE405 ephemeris (published 1997).
 
 ### Supported operating systems
 
@@ -29,12 +34,12 @@ Unix-like operating systems.
 ### License
 
 This code is distributed under the Gnu General Public License. It is © Dominic
-Ford 2010 - 2025.
+Ford 2010 - 2026.
 
 ### Set up
 
 Before you start, `ephemerisCompute` needs to download various data from the
-internet, including the DE430 ephemeris files, the asteroid catalogue, and the
+internet, including the DE4xx ephemeris files, the asteroid catalogue, and the
 list of comets.
 
 This can be done with the shell script `setup.sh`. The total download size will
@@ -57,13 +62,13 @@ script is provided to build the software and display a single demo ephemeris:
 
 ```
 docker compose build
-docker compose run ephemeris-compute-de430
+docker compose run ephemeris-compute-de4xx
 ```
 
 To make other ephemerides, open a shell within the Docker container as follows:
 
 ```
-docker run -it ephemeris-compute-de430:v7 /bin/bash
+docker run -it ephemeris-compute-de4xx:v8 /bin/bash
 ```
 
 ### Producing an ephemeris
@@ -73,9 +78,9 @@ ephemeris for Jupiter between 2000 Jan 1 and 2000 Feb 1, at midnight each day:
 
 ```
 dominic@ganymede:~/ephemerisCompute$ ./bin/ephem.bin
-2451544.500000000000    3.996320681  2.730993728  1.073274469
-2451545.500000000000    3.991757746  2.736868431  1.075903739
-2451546.500000000000    3.987185148  2.742736516  1.078530407
+2451544.500000000000   3.9963890377035507 2.7309425445995013 1.0732394487750072
+2451545.500000000000   3.9918297581095996 2.7368109182255269 1.0758659226594827
+2451546.500000000000   3.9872608492979653 2.7426726205786123 1.0784897750709959
 ...
 ```
 
@@ -111,7 +116,7 @@ The following command-line arguments can be used to customise the ephemeris:
 
 * `--output_constellations` [int] - If non-zero, then the final column states the name of the constellation the object is in. Note the fetching this information is one of the slowest routines within ephemerisCompute, so this may have significant performance impact when computing large ephemerides. If binary output is requested, then the constellation name is output as an abbreviated name, with a fixed width of 8 bytes, at the end of each record.
 
-* `--use_orbital_elements` [int] - If zero, then the NASA JPL DE430 ephemeris is used to produce the ephemeris. This will give best accuracy (by far). If set to 1, then orbital elements for all objects are used to compute their approximate positions. If set to 2, then algorithms from Jean Meeus's book "Astronomical Algorithms" are used [not currently supported; do not use!]. The positions of comets and asteroids are always computed using orbital elements, since they are not included in DE430.
+* `--use_orbital_elements` [int] - If zero, then the NASA JPL DE4xx ephemeris is used to produce the ephemeris. This will give best accuracy (by far). If set to 1, then orbital elements for all objects are used to compute their approximate positions. If set to 2, then algorithms from Jean Meeus's book "Astronomical Algorithms" are used [not currently supported; do not use!]. The positions of comets and asteroids are always computed using orbital elements, since they are not included in DE4xx.
 
 * `--output_format` [int] - Selects what data should be returned. The following formats are currently supported:
 
@@ -174,6 +179,8 @@ files that are closest before and after the requested epoch. The predicted posit
 linearly interpolated to ensure that the output ephemerides are always continuous and differentiable.
 
 ### Change history
+
+**Version 8.0** (18 Apr 2026) - Adds support for DE405, DE430, DE431, DE440 and DE441.
 
 **Version 7.0** (10 Nov 2025) - Support using multiple files of asteroid / comet orbital elements at different epochs. Add socket-based server/client interface for rapid queries.
 

@@ -1,7 +1,7 @@
 // settings.c
 // 
 // -------------------------------------------------
-// Copyright 2015-2025 Dominic Ford
+// Copyright 2015-2026 Dominic Ford
 //
 // This file is part of EphemerisCompute.
 //
@@ -70,7 +70,7 @@ void settings_display(const settings *i, FILE *output) {
 
 // Process the contents of a settings structure before producing the ephemeris
 void settings_process(settings *i, int *status, char *error_text) {
-    int k, l;
+    *status = 0;
 
     // Debugging code to output the settings in use
     //    {
@@ -81,7 +81,7 @@ void settings_process(settings *i, int *status, char *error_text) {
     //    }
 
     // Transfer the names of objects we are to compute ephemerides for from <i->objects_input_list> to <i->object_name>
-    k = l = 0;
+    int k = 0, l = 0;
     while (i->objects_input_list[k] > '\0') {
         // Commas are used to separate object names on the command line
         if (i->objects_input_list[k] == ',') {
@@ -117,12 +117,9 @@ void settings_process(settings *i, int *status, char *error_text) {
         if (i->body_id[k] < 0) {
             *status = 1;
             snprintf(error_text, FNAME_LENGTH, "Unrecognised object name <%s>", i->object_name[k]);
-            return;
+            //return;
         }
     }
-
-    // Finished
-    *status = 0;
 }
 
 // Delete any memory allocated within a settings structure

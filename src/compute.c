@@ -1,7 +1,7 @@
 // compute.c
 // 
 // -------------------------------------------------
-// Copyright 2015-2025 Dominic Ford
+// Copyright 2015-2026 Dominic Ford
 //
 // This file is part of EphemerisCompute.
 //
@@ -70,8 +70,13 @@ int compute_ephemeris_time_point(const settings *s, FILE *output, const double j
         double sun_dist = 0, earth_dist = 0, sun_ang_dist = 0, theta_eso = 0;
         double ecliptic_longitude = 0, ecliptic_latitude = 0, ecliptic_distance = 0;
 
-        if (s->use_orbital_elements == 0) {
-            // If the <use_orbital_elements> is 0, we use DE430
+        if (s->body_id[i] < 0) {
+            // Unrecognised object
+            x = y = z = ra = dec = mag = phase = ang_size = phy_size = albedo = GSL_NAN;
+            sun_dist = earth_dist = sun_ang_dist = theta_eso = GSL_NAN;
+            ecliptic_longitude = ecliptic_latitude = ecliptic_distance = GSL_NAN;
+        } else if (s->use_orbital_elements == 0) {
+            // If the <use_orbital_elements> is 0, we use DE4xx
             jpl_computeEphemeris(s->body_id[i], jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size, &phy_size,
                                  &albedo,
                                  &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso, &ecliptic_longitude,
@@ -143,8 +148,9 @@ int compute_ephemeris_time_point(const settings *s, FILE *output, const double j
     for (i = 0; i < s->objects_count; i++) {
         const int o = i * N_PARAMETERS;
 
-        // Produce text-based output
         if (!s->output_binary) {
+            // Produce text-based output
+
             // Supported output data formats (text):
 
             //-1 - jd x y z   (ecliptic)                                      [ 4 columns]
@@ -199,10 +205,8 @@ int compute_ephemeris_time_point(const settings *s, FILE *output, const double j
             if (s->output_constellations) {
                 bytes_written += fprintf(output, "%s ", constellations_fetch(buffer[o + 3], buffer[o + 4], 1));
             }
-        }
-
+        } else {
             // Produce binary output
-        else {
             if (s->output_format != 1) {
                 fwrite((void *) (buffer + o + 0), sizeof(double), 3, output);
                 bytes_written += 3 * sizeof(double);
@@ -252,13 +256,12 @@ int compute_ephemeris(settings *s, FILE *output, long *rows_computed, int *statu
 
     // Initial processing of settings for this ephemeris
     settings_process(s, status, error_text);
-    if (*status) return 0;
 
     if (s->jd_list == NULL) {
         // Loop over all the time points in the ephemeris
         const int steps_total = (int) ceil((s->jd_max - s->jd_min) / s->jd_step);
         for (int step_count = 0; step_count < steps_total; step_count++) {
-            const double jd = s->jd_min + step_count * s->jd_step;  // TT
+            const double jd = s->jd_min + step_count * s->jd_step; // TT
             bytes_written += compute_ephemeris_time_point(s, output, jd);
             (*rows_computed)++;
         }

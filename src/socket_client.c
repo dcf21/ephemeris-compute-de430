@@ -1,7 +1,7 @@
 // socket_client.c
 // 
 // -------------------------------------------------
-// Copyright 2015-2025 Dominic Ford
+// Copyright 2015-2026 Dominic Ford
 //
 // This file is part of EphemerisCompute.
 //
@@ -101,7 +101,7 @@ int main(int argc, const char **argv) {
             OPT_INTEGER('f', "output_format", &ephemeris_settings.output_format,
                         "The output format for the ephemeris. See README.md."),
             OPT_INTEGER('r', "use_orbital_elements", &ephemeris_settings.use_orbital_elements,
-                        "Set the either 0 (use DE430) or 1 (use orbital elements)"),
+                        "Set the either 0 (use DE4xx) or 1 (use orbital elements)"),
             OPT_INTEGER('z', "output_binary", &ephemeris_settings.output_binary,
                         "Set to either 0 (text output) or 1 (binary output)"),
             OPT_INTEGER('c', "output_constellations", &ephemeris_settings.output_constellations,

@@ -15,5 +15,12 @@ eggs/
 /obj
 /.idea
 /cmake-build-debug
-/data
+
+# Input data files
+/data/astorb.dat
+/data/Soft00Cmt.txt
+/data/Soft00Cmt_*.txt
+/data/de4*
+/data/binary_*.bin
+/data/list_*.txt
 

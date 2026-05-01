@@ -2,7 +2,7 @@
 // Dominic Ford
 // 
 // -------------------------------------------------
-// Copyright 2015-2025 Dominic Ford
+// Copyright 2015-2026 Dominic Ford
 //
 // This file is part of EphemerisCompute.
 //
@@ -36,6 +36,7 @@
 #include "coreUtils/errorReport.h"
 
 #include "ephemCalc/constellations.h"
+#include "ephemCalc/jpl.h"
 #include "ephemCalc/orbitalElements.h"
 
 #include "listTools/ltMemory.h"
@@ -64,8 +65,8 @@ int fetch_orbital_elements(int object_index, double jd, orbitalElements *output)
 
     // Fetch the best set of orbital elements to use for this object at the requested epoch
     const int item_count = orbitalElements_fetch(
-            1, object_index, jd,
-            &orbital_elements_0, &weight_0, &orbital_elements_1, &weight_1);
+        1, object_index, jd,
+        &orbital_elements_0, &weight_0, &orbital_elements_1, &weight_1);
     if (item_count < 1) return 0;
 
     // Use the set of orbital elements with the greatest weight.
@@ -222,13 +223,13 @@ void scan_for_oppositions(settings *s, double jd_min, double jd_max, double jd_s
                 double ecliptic_longitude = 0, ecliptic_latitude = 0, ecliptic_distance = 0;
 
                 orbitalElements_computeEphemeris(
-                        ASTEROIDS_OFFSET + object_index, jd, &x, &y, &z, &ra, &dec, &mag, &phase,
-                        &ang_size,
-                        &phy_size,
-                        &albedo, &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso,
-                        &ecliptic_longitude, &ecliptic_latitude,
-                        &ecliptic_distance, s->ra_dec_epoch,
-                        0, 0, 0);
+                    ASTEROIDS_OFFSET + object_index, jd, &x, &y, &z, &ra, &dec, &mag, &phase,
+                    &ang_size,
+                    &phy_size,
+                    &albedo, &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso,
+                    &ecliptic_longitude, &ecliptic_latitude,
+                    &ecliptic_distance, s->ra_dec_epoch,
+                    0, 0, 0);
 
                 // Check if asteroid is bright enough to be of interest
                 if ((mag < mag_limit) && (loop_iter > 2)) {
@@ -301,6 +302,7 @@ int main(int argc, char **argv) {
     int inputs_read = 0;
     settings s_model;
     double input[N_INPUTS];
+    const int use_de_number = 440;
 
     // Pass 1: Step through the search period at 4-day resolution, compiling a list of asteroids that exceed the magnitude limit
     const double jd_step_pass_1 = 4;
@@ -311,6 +313,7 @@ int main(int argc, char **argv) {
     // Initialise sub-modules
     if (DEBUG) ephem_log("Initialising asteroid opposition search.");
     lt_memoryInit(&ephem_error, &ephem_log);
+    jpl_setEphemerisNumber(use_de_number);
     constellations_init();
 
     // Turn off GSL's automatic error handler
@@ -387,8 +390,7 @@ int main(int argc, char **argv) {
         settings_default(&s_model);
         settings_process(&s_model, &status, error_text);
         if (status) {
-            ephem_fatal(__FILE__, __LINE__, error_text);
-            exit(1);
+            ephem_error(error_text);
         }
     }
 
@@ -401,7 +403,7 @@ int main(int argc, char **argv) {
     const double mag_limit = input[6];
 
     // Open asteroid database
-    asteroid_database.cache_in_memory = 1;  // This is memory intensive, but results in a 10x speed-up
+    asteroid_database.cache_in_memory = 1; // This is memory intensive, but results in a 10x speed-up
     orbitalElements_asteroids_init(1);
 
     if (DEBUG) {

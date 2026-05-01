@@ -1,7 +1,7 @@
 // socket_server.c
 // 
 // -------------------------------------------------
-// Copyright 2015-2025 Dominic Ford
+// Copyright 2015-2026 Dominic Ford
 //
 // This file is part of EphemerisCompute.
 //
@@ -22,7 +22,6 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <time.h>
@@ -36,13 +35,14 @@
 #include "coreUtils/errorReport.h"
 #include "coreUtils/asciiDouble.h"
 #include "ephemCalc/constellations.h"
+#include "ephemCalc/jpl.h"
 #include "listTools/ltMemory.h"
 #include "settings/settings.h"
 
 static const char *const usage[] = {
-        "socker_server.bin [options] [[--] args]",
-        "socker_server.bin [options]",
-        NULL,
+    "socker_server.bin [options] [[--] args]",
+    "socker_server.bin [options]",
+    NULL,
 };
 
 //! read_float - Read a floating-point input argument from an input query.
@@ -72,7 +72,7 @@ int read_float(char **scan, double *target, const char *argument_name, const int
             fflush(stdout);
             return 1;
         }
-        char_count++;  // forward over separator
+        char_count++; // forward over separator
     }
     (*scan) += char_count;
     return 0;
@@ -103,7 +103,7 @@ int read_integer(char **scan, int *target, const char *argument_name, const int 
             fflush(stdout);
             return 1;
         }
-        char_count++;  // forward over separator
+        char_count++; // forward over separator
     }
     (*scan) += char_count;
     return 0;
@@ -165,7 +165,7 @@ int read_string(char **scan, char **target, int nullable, const char *argument_n
             fflush(stdout);
             return 1;
         }
-        char_count++;  // forward over separator
+        char_count++; // forward over separator
     }
 
     (*scan) += char_count;
@@ -178,6 +178,7 @@ int read_string(char **scan, char **target, int nullable, const char *argument_n
 int main(int argc, const char **argv) {
     int service_port = 8091;
     int local_only = 1;
+    int use_de_number = 440;
 
     // Initialise sub-modules
     if (DEBUG) ephem_log("Initialising ephemeris computer.");
@@ -189,14 +190,16 @@ int main(int argc, const char **argv) {
 
     // Scan command-line options for any switches
     struct argparse_option options[] = {
-            OPT_HELP(),
-            OPT_GROUP("Basic options"),
-            OPT_INTEGER('p', "port", &service_port,
-                        "Port number for remote computation service"),
-            OPT_INTEGER('l', "local_only", &local_only,
-                        "If true, then the service is only exposed for connections from localhost. If false, the "
-                        "service is visible to external network traffic"),
-            OPT_END(),
+        OPT_HELP(),
+        OPT_GROUP("Basic options"),
+        OPT_INTEGER('p', "port", &service_port,
+                    "Port number for remote computation service"),
+        OPT_INTEGER('l', "local_only", &local_only,
+                    "If true, then the service is only exposed for connections from localhost. If false, the "
+                    "service is visible to external network traffic"),
+        OPT_INTEGER('d', "use_de", &use_de_number,
+                    "Select which NASA JPL DE4xx ephemeris to use (e.g. 440 for DE440; default)"),
+        OPT_END(),
     };
 
     // Read command-line options
@@ -216,6 +219,9 @@ int main(int argc, const char **argv) {
         }
         ephem_fatal(__FILE__, __LINE__, "Unparsed arguments");
     }
+
+    // Select which NASA JPL DE4xx ephemeris to use
+    jpl_setEphemerisNumber(use_de_number);
 
     // Creating socket file descriptor
     const int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -243,7 +249,7 @@ int main(int argc, const char **argv) {
 
     struct timeval timeout;
     timeout.tv_sec = 0;
-    timeout.tv_usec = (int) (500e3);  // microseconds
+    timeout.tv_usec = (int) (500e3); // microseconds
 
     const int sockopt_3_status = setsockopt(server_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     if (sockopt_3_status) {
@@ -309,13 +315,14 @@ int main(int argc, const char **argv) {
         time_t now = time(NULL);
         if (now > last_report + reporting_cadence) {
             char timestamp_buffer[FNAME_LENGTH];
-            printf("[%s] Connection count %8ld. Row count %9ld. Connection rate %10.1f per hour. Output bandwidth %9.2f MB/hour. Mean compute time %10.4f ms. Fraction with constellations %6.2f%%.\n",
-                   str_strip(friendly_time_string(), timestamp_buffer),
-                   connection_count, row_count,
-                   connection_count * 3600. / reporting_cadence,
-                   byte_count * 3600. / reporting_cadence / 1024. / 1024.,
-                   sum_compute_time / (connection_count + 1e-8),
-                   connection_count_requiring_constellations / (connection_count + 1e-8) * 100.
+            printf(
+                "[%s] Connection count %8ld. Row count %9ld. Connection rate %10.1f per hour. Output bandwidth %9.2f MB/hour. Mean compute time %10.4f ms. Fraction with constellations %6.2f%%.\n",
+                str_strip(friendly_time_string(), timestamp_buffer),
+                connection_count, row_count,
+                connection_count * 3600. / reporting_cadence,
+                byte_count * 3600. / reporting_cadence / 1024. / 1024.,
+                sum_compute_time / (connection_count + 1e-8),
+                connection_count_requiring_constellations / (connection_count + 1e-8) * 100.
             );
             fflush(stdout);
             connection_count = 0;
@@ -473,7 +480,7 @@ int main(int argc, const char **argv) {
         sum_compute_time += compute_time;
 
         // Clean-up this socket connection
-        connection_cleanup:
+    connection_cleanup:
         if (buffer != NULL) free(buffer);
         if (jd_list_malloced && (ephemeris_settings.jd_list != NULL)) {
             free(ephemeris_settings.jd_list);
