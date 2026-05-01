@@ -222,12 +222,12 @@ def fetch_required_files(refresh: bool = False, never_refresh: bool = False,
 
         # Definitions of constellation boundaries
         #       {
-        #           'url': 'https://cdsarc.u-strasbg.fr/ftp/VI/49/bound_20.dat.gz',
+        #           'url': 'https://cdsarc.cds.unistra.fr/ftp/VI/49/bound_20.dat.gz',
         #           'destination': 'constellations/bound_20.dat',
         #           'force_refresh': refresh
         #       },
         #       {
-        #           'url': 'https://cdsarc.u-strasbg.fr/ftp/VI/49/ReadMe',
+        #           'url': 'https://cdsarc.cds.unistra.fr/ftp/VI/49/ReadMe',
         #           'destination': 'constellations/ReadMe',
         #           'force_refresh': refresh
         #       }
