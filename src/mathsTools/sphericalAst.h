@@ -22,9 +22,19 @@
 #ifndef SPHERICALAST_H
 #define SPHERICALAST_H 1
 
+#include "mathsTools/deltaT.h"
+
 double angDist_ABC(double xa, double ya, double za, double xb, double yb, double zb, double xc, double yc, double zc);
 
 double angDist_RADec(double ra0, double dec0, double ra1, double dec1);
+
+double getAltitude(DeltaTCalculator *dt_calc, double ra, double dec, double JD, double latitude);
+
+void write_object_separation_string(double separation_radians, char *separation_string);
+
+double properMotion(double ra0, double dec0, double ra1, double dec1, double utcStep);
+
+double positionAngle(double ra0, double dec0, double ra1, double dec1);
 
 #endif
 

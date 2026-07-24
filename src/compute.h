@@ -23,13 +23,14 @@
 #define COMPUTE_H 1
 
 #include <stdio.h>
+#include "mathsTools/deltaT.h"
 #include "settings/settings.h"
 
-int compute_ephemeris_time_point(const settings *s, FILE *output, const double jd);
+int compute_ephemeris_time_point(const settings *s, const DeltaTCalculator *dt_calc, FILE *output, double jd_tt);
 
-int compute_ephemeris(settings *s, FILE *output, long *rows_computed, int *status, char *error_text);
+int compute_ephemeris(settings *s, const DeltaTCalculator *dt_calc,
+                      FILE *output, long *rows_computed, int *status, char *error_text);
 
 void compute_ephemeris_shutdown();
 
 #endif
-

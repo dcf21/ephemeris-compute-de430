@@ -27,11 +27,12 @@
 #define MAX_OBJECTS 48
 
 typedef struct settings {
-    double jd_min, jd_max, jd_step, ra_dec_epoch;  // All specified in TT
-    double latitude, longitude;  // Used for topocentric correction
-    int enable_topocentric_correction;  // Boolean
+    double jd_min, jd_max, jd_step, ra_dec_epoch; // All specified in TT
+    double latitude, longitude; // Used for topocentric correction
+    int enable_topocentric_correction; // Boolean
     int use_orbital_elements, output_binary, output_format, output_constellations;
     int body_id[MAX_OBJECTS];
+    char *time_standard;
     char object_name[MAX_OBJECTS][FNAME_LENGTH];
     char *objects_input_list, *jd_list;
     int objects_count;
@@ -39,9 +40,10 @@ typedef struct settings {
 
 void settings_default(settings *i);
 
+void settings_validate(const settings *i, int *status, char *error_text);
+
 void settings_process(settings *i, int *status, char *error_text);
 
 void settings_close(settings *i);
 
 #endif
-

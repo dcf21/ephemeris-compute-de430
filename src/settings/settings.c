@@ -22,9 +22,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 #include <unistd.h>
-#include <coreUtils/errorReport.h>
 
 #include "coreUtils/asciiDouble.h"
 #include "ephemCalc/orbitalElements.h"
@@ -45,6 +43,7 @@ void settings_default(settings *i) {
     i->output_constellations = 0;
     i->output_binary = 0;
     i->objects_count = 0;
+    i->time_standard = "tt";
     i->objects_input_list = "jupiter";
     i->jd_list = NULL;
 }
@@ -54,6 +53,7 @@ void settings_display(const settings *i, FILE *output) {
     fprintf(output, "jd_min = %.18e\n", i->jd_min);
     fprintf(output, "jd_max = %.18e\n", i->jd_max);
     fprintf(output, "jd_step = %.18e\n", i->jd_step);
+    fprintf(output, "time_standard = %s\n", i->time_standard);
     fprintf(output, "latitude = %.18e\n", i->latitude);
     fprintf(output, "longitude = %.18e\n", i->longitude);
     fprintf(output, "enable_topocentric_correction = %d\n", i->enable_topocentric_correction);
@@ -69,7 +69,8 @@ void settings_display(const settings *i, FILE *output) {
 }
 
 // Process the contents of a settings structure before producing the ephemeris
-void settings_process(settings *i, int *status, char *error_text) {
+void settings_validate(const settings *i, int *status, char *error_text) {
+    // Clear error status
     *status = 0;
 
     // Debugging code to output the settings in use
@@ -79,6 +80,23 @@ void settings_process(settings *i, int *status, char *error_text) {
     //        settings_display(i, o);
     //        fclose(o);
     //    }
+
+    // Check that we're using a recognised time standard
+    if ((str_cmp_no_case(i->time_standard, "tt") != 0) && (str_cmp_no_case(i->time_standard, "utc") != 0)) {
+        *status = 1;
+        snprintf(error_text, FNAME_LENGTH, "Unrecognised time standard <%s>.", i->time_standard);
+        return;
+    }
+}
+
+// Process the contents of a settings structure before producing the ephemeris
+void settings_process(settings *i, int *status, char *error_text) {
+    // Clear error status
+    *status = 0;
+
+    // Check that settings are valid
+    settings_validate(i, status, error_text);
+    if (*status) return;
 
     // Transfer the names of objects we are to compute ephemerides for from <i->objects_input_list> to <i->object_name>
     int k = 0, l = 0;

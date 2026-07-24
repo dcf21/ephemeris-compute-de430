@@ -223,6 +223,12 @@ int main(int argc, const char **argv) {
     // Select which NASA JPL DE4xx ephemeris to use
     jpl_setEphemerisNumber(use_de_number);
 
+    // Instantiate Delta-T calculator
+    DeltaTCalculator dt_calc;
+    if (!delta_t_init(&dt_calc)) {
+        ephem_fatal(__FILE__, __LINE__, "Failed to initialise <DeltaTCalculator>.");
+    }
+
     // Creating socket file descriptor
     const int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
@@ -353,7 +359,7 @@ int main(int argc, const char **argv) {
 
         // Set up default settings
         settings ephemeris_settings;
-        int jd_list_malloced = 0, objects_list_malloced = 0;
+        int jd_list_malloced = 0, time_standard_malloced = 0, objects_list_malloced = 0;
         if (DEBUG) ephem_log("Setting up default ephemeris parameters.");
         settings_default(&ephemeris_settings);
 
@@ -409,6 +415,11 @@ int main(int argc, const char **argv) {
             close(new_socket);
             goto connection_cleanup;
         }
+        time_standard_malloced = 1;
+        if (read_string(&scan, &ephemeris_settings.time_standard, 1, "time_standard", 0)) {
+            close(new_socket);
+            goto connection_cleanup;
+        }
         if (read_float(&scan, &ephemeris_settings.latitude, "latitude", 0)) {
             close(new_socket);
             goto connection_cleanup;
@@ -453,7 +464,7 @@ int main(int argc, const char **argv) {
             FILE *output = fdopen(new_socket, "w");
             int status = 0;
             char error_text[LSTR_LENGTH] = "\0";
-            byte_count += compute_ephemeris(&ephemeris_settings, output, &row_count, &status, error_text);
+            byte_count += compute_ephemeris(&ephemeris_settings, &dt_calc, output, &row_count, &status, error_text);
             if (status) {
                 char timestamp_buffer[FNAME_LENGTH];
                 printf("ERROR: [%s] %s\n", str_strip(friendly_time_string(), timestamp_buffer), error_text);
@@ -485,6 +496,9 @@ int main(int argc, const char **argv) {
         if (jd_list_malloced && (ephemeris_settings.jd_list != NULL)) {
             free(ephemeris_settings.jd_list);
         }
+        if (time_standard_malloced && (ephemeris_settings.time_standard != NULL)) {
+            free(ephemeris_settings.time_standard);
+        }
         if (objects_list_malloced && (ephemeris_settings.objects_input_list != NULL)) {
             free(ephemeris_settings.objects_input_list);
         }
@@ -492,6 +506,11 @@ int main(int argc, const char **argv) {
 
     // closing the listening socket
     close(server_fd);
+
+    // Free Delta-T calculator
+    delta_t_free(&dt_calc);
+
+    // Free ephemeris computer
     compute_ephemeris_shutdown();
     lt_freeAll(0);
     lt_memoryStop();

@@ -36,28 +36,31 @@
 #include "ephemCalc/magnitudeEstimate.h"
 #include "ephemCalc/meeus.h"
 #include "ephemCalc/orbitalElements.h"
-#include "mathsTools/precess_equinoxes.h"
+#include "mathsTools/deltaT.h"
+#include "mathsTools/julianDate.h"
+#include "mathsTools/precession.h"
 
 #include "settings/settings.h"
 
 // Buffer used for building a single row of output
-#define N_PARAMETERS 17
+#define N_PARAMETERS 19
 static double buffer[N_PARAMETERS * MAX_OBJECTS];
 
 //! compute_ephemeris_time_point - Compute the positions of all requested objects, at a single time point.
-//! \param s - The ephemeris settings.
-//! \param output - The output stream to which we write a single row of results.
-//! \param jd - The Julian date of the time point we are calculating.
-//! \return - The number of bytes written to the output stream.
+//! @param [in] s - The ephemeris settings.
+//! @param [in] dt_calc - Delta-T computation instance.
+//! @param [out] output - The output stream to which we write a single row of results.
+//! @param [in] jd_tt - The Julian date of the time point we are calculating (TT).
+//! @return - The number of bytes written to the output stream.
 
-int compute_ephemeris_time_point(const settings *s, FILE *output, const double jd) {
+int compute_ephemeris_time_point(const settings *s, const DeltaTCalculator *dt_calc, FILE *output, const double jd_tt) {
     // Keep track of how much data we have written
     int bytes_written = 0;
 
     // When producing a text-based ephemeris, the first column in Julian day number (TT)
     // Binary ephemerides have no JD column to save space.
     if (!s->output_binary) {
-        bytes_written += fprintf(output, "%.12f   ", jd);
+        bytes_written += fprintf(output, "%.12f   ", jd_tt);
     }
 
     // Compute ephemeris
@@ -77,7 +80,7 @@ int compute_ephemeris_time_point(const settings *s, FILE *output, const double j
             ecliptic_longitude = ecliptic_latitude = ecliptic_distance = GSL_NAN;
         } else if (s->use_orbital_elements == 0) {
             // If the <use_orbital_elements> is 0, we use DE4xx
-            jpl_computeEphemeris(s->body_id[i], jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size, &phy_size,
+            jpl_computeEphemeris(s->body_id[i], jd_tt, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size, &phy_size,
                                  &albedo,
                                  &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso, &ecliptic_longitude,
                                  &ecliptic_latitude, &ecliptic_distance, s->ra_dec_epoch,
@@ -85,7 +88,7 @@ int compute_ephemeris_time_point(const settings *s, FILE *output, const double j
                                  s->latitude, s->longitude);
         } else if (s->use_orbital_elements == 2) {
             // If the <use_orbital_elements> is 2, we use Jean Meeus's algorithms (NOT IMPLEMENTED!!!)
-            meeus_computeEphemeris(s->body_id[i], jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size, &phy_size,
+            meeus_computeEphemeris(s->body_id[i], jd_tt, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size, &phy_size,
                                    &albedo,
                                    &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso, &ecliptic_longitude,
                                    &ecliptic_latitude, &ecliptic_distance, s->ra_dec_epoch,
@@ -93,7 +96,7 @@ int compute_ephemeris_time_point(const settings *s, FILE *output, const double j
                                    s->latitude, s->longitude);
         } else if (s->use_orbital_elements == 1) {
             // If the <use_orbital_elements> is 1, we use orbital elements
-            orbitalElements_computeEphemeris(s->body_id[i], jd, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size,
+            orbitalElements_computeEphemeris(s->body_id[i], jd_tt, &x, &y, &z, &ra, &dec, &mag, &phase, &ang_size,
                                              &phy_size,
                                              &albedo, &sun_dist, &earth_dist, &sun_ang_dist, &theta_eso,
                                              &ecliptic_longitude, &ecliptic_latitude,
@@ -118,26 +121,30 @@ int compute_ephemeris_time_point(const settings *s, FILE *output, const double j
         }
 
         // Convert ecliptic longitude we output to epoch of observation
-        double eclTo_lat, eclTo_lng;
-        precess(2451545.0, jd, ecliptic_longitude, ecliptic_latitude, &eclTo_lng, &eclTo_lat);
+        double ecl_lat_epoch, ecl_lng_epoch;
+        ecl_switch_epoch(2451545.0, jd_tt,
+            ecliptic_longitude, ecliptic_latitude,
+            &ecl_lng_epoch, &ecl_lat_epoch);
 
-        buffer[o + 0] = x;
-        buffer[o + 1] = y;
-        buffer[o + 2] = z;
-        buffer[o + 3] = ra;
-        buffer[o + 4] = dec;
+        buffer[o + 0] = x; // AU
+        buffer[o + 1] = y; // AU
+        buffer[o + 2] = z; // AU
+        buffer[o + 3] = ra; // radians
+        buffer[o + 4] = dec; // radians
         buffer[o + 5] = mag;
-        buffer[o + 6] = phase;
-        buffer[o + 7] = ang_size;
-        buffer[o + 8] = phy_size;
-        buffer[o + 9] = albedo;
-        buffer[o + 10] = sun_dist;
-        buffer[o + 11] = earth_dist;
-        buffer[o + 12] = sun_ang_dist;
-        buffer[o + 13] = theta_eso;
-        buffer[o + 14] = eclTo_lng; // ecliptic longitude in epoch of jd, not J2000.0
-        buffer[o + 15] = ecliptic_distance;
-        buffer[o + 16] = eclTo_lat;
+        buffer[o + 6] = phase; // 0-1
+        buffer[o + 7] = ang_size; // diameter; arcseconds
+        buffer[o + 8] = phy_size; // diameter; metres
+        buffer[o + 9] = albedo; // 0-1
+        buffer[o + 10] = sun_dist; // AU
+        buffer[o + 11] = earth_dist; // AU
+        buffer[o + 12] = sun_ang_dist; // radians
+        buffer[o + 13] = theta_eso; // radians
+        buffer[o + 14] = ecl_lng_epoch; // radians; ecliptic longitude in epoch of jd, not J2000.0
+        buffer[o + 15] = ecliptic_distance; // radians
+        buffer[o + 16] = ecl_lat_epoch; // radians; ecliptic latitude in epoch of jd, not J2000.0
+        buffer[o + 17] = sidereal_time_jd(dt_calc, jd_tt); // radians
+        buffer[o + 18] = delta_t(dt_calc, jd_tt); // seconds
 
         // fix ecliptic longitude for precession of the equinoxes
         if (buffer[o + 14] > M_PI) buffer[o + 14] -= 2 * M_PI;
@@ -157,7 +164,7 @@ int compute_ephemeris_time_point(const settings *s, FILE *output, const double j
             // 0 - jd x y z   (J2000)                                         [ 4 columns]
             // 1 - jd ra dec  (radians)                                       [ 3 columns]
             // 2 - jd x y z ra dec mag phase AngSize                          [ 9 columns]
-            // 3 - jd x y z ra dec mag phase AngSize physical_size albedo ... [18 columns]
+            // 3 - jd x y z ra dec mag phase AngSize physical_size albedo ... [20 columns]
 
             // if (s->output_constellation) is set, one additional column is output (variable width)
 
@@ -167,38 +174,41 @@ int compute_ephemeris_time_point(const settings *s, FILE *output, const double j
             // 0 - x y z   (J2000)                                         [ 3 columns]
             // 1 - ra dec  (radians)                                       [ 2 columns]
             // 2 - x y z ra dec mag phase AngSize                          [ 8 columns]
-            // 3 - x y z ra dec mag phase AngSize physical_size albedo ... [17 columns]
+            // 3 - x y z ra dec mag phase AngSize physical_size albedo ... [19 columns]
 
             // if (s->output_constellation) is set, one additional column is output (8 bytes)
 
-            // Write XYZ coordinates (in all modes but 1)
+            // Write: XYZ coordinates (in all modes but 1)
             if (s->output_format != 1) {
                 bytes_written += fprintf(output,
                                          "%12.16f %12.16f %12.16f   ",
                                          buffer[o + 0], buffer[o + 1], buffer[o + 2]);
             }
 
-            // Write RA and Dec in modes 1,2,3
+            // Write: RA and Dec in modes 1,2,3
             if (s->output_format >= 1) {
                 bytes_written += fprintf(output,
                                          "%12.16f %12.16f   ",
                                          buffer[o + 3], buffer[o + 4]);
             }
 
-            // Write magnitude, phase and angular size in modes 2,3
+            // Write: magnitude, phase and angular size in modes 2,3
             if (s->output_format >= 2) {
                 bytes_written += fprintf(output,
                                          "%6.10f %7.10f %12.10f   ",
                                          buffer[o + 5], buffer[o + 6], buffer[o + 7]);
             }
 
-            // Write physical size, albedo, sun_dist, earth_dist, sun_ang_dist, theta_edo, eclLng, eclDist, eclLat
+            // Write: physical size, albedo, sun_dist, earth_dist, sun_ang_dist, theta_edo, eclLng, eclDist, eclLat,
+            //        sidereal time, delta_T
             if (s->output_format >= 3) {
-                bytes_written += fprintf(output,
-                                         "%12.10e %8.10f %12.12f %12.12f %12.12f %12.12f %12.12f %12.12f %12.12f  ",
-                                         buffer[o + 8], buffer[o + 9],
-                                         buffer[o + 10], buffer[o + 11], buffer[o + 12], buffer[o + 13],
-                                         buffer[o + 14], buffer[o + 15], buffer[o + 16]);
+                bytes_written += fprintf(
+                    output,
+                    "%12.10e %8.10f %12.12f %12.12f %12.12f %12.12f %12.12f %12.12f %12.12f %12.12f %12.12f  ",
+                    buffer[o + 8], buffer[o + 9],
+                    buffer[o + 10], buffer[o + 11], buffer[o + 12], buffer[o + 13],
+                    buffer[o + 14], buffer[o + 15], buffer[o + 16],
+                    buffer[o + 17], buffer[o + 18]);
             }
 
             // Write the name of the constellation the object is in, in the final column
@@ -220,8 +230,8 @@ int compute_ephemeris_time_point(const settings *s, FILE *output, const double j
                 bytes_written += 3 * sizeof(double);
             }
             if (s->output_format >= 3) {
-                fwrite((void *) (buffer + o + 8), sizeof(double), 9, output);
-                bytes_written += 9 * sizeof(double);
+                fwrite((void *) (buffer + o + 8), sizeof(double), 11, output);
+                bytes_written += 11 * sizeof(double);
             }
             if (s->output_constellations) {
                 // Copy constellation ID into an 8-byte null-terminated buffer, to ensure it is padded with zeros
@@ -242,15 +252,38 @@ int compute_ephemeris_time_point(const settings *s, FILE *output, const double j
     return bytes_written;
 }
 
-//! compute_ephemeris - Main entry point to compute an ephemeris, with parameters described by a settings structure
-//! \param [in] s - The ephemeris settings.
-//! \param [in] output - The output stream where we write results.
-//! \param [out] rows_computed - The number of rows we wrote to the output stream.
-//! \param [out] status - 0 on success; 1 otherwise
-//! \param [out] error_text - Error message in the event of failure.
-//! \return The number of bytes written to the output stream.
+//! apply_time_standard - Convert the input Julian day number into Terrestrial Time
+//! @param [in] s - The ephemeris settings.
+//! @param [in] dt_calc - Delta-T computation instance.
+//! @param [in] jd_in - The requested Julian day number.
+//! @param [out] jd_tt - The output TT Julian day number.
+//! @param [out] jd_utc - The output UTC Julian day number.
 
-int compute_ephemeris(settings *s, FILE *output, long *rows_computed, int *status, char *error_text) {
+void apply_time_standard(const settings *s, const DeltaTCalculator *dt_calc,
+                         const double jd_in, double *jd_tt, double *jd_utc) {
+    // Check which time standard is in use
+    const int use_tt = (str_cmp_no_case(s->time_standard, "tt") == 0);
+
+    if (use_tt) {
+        *jd_utc = utc_from_tt(dt_calc, jd_in, 0, 0);
+        *jd_tt = jd_in;
+    } else {
+        *jd_utc = jd_in;
+        *jd_tt = tt_from_utc(dt_calc, jd_in, 0, 0);
+    }
+}
+
+//! compute_ephemeris - Main entry point to compute an ephemeris, with parameters described by a settings structure
+//! @param [in] s - The ephemeris settings.
+//! @param [in] dt_calc - Delta-T computation instance.
+//! @param [in] output - The output stream where we write results.
+//! @param [out] rows_computed - The number of rows we wrote to the output stream.
+//! @param [out] status - 0 on success; 1 otherwise
+//! @param [out] error_text - Error message in the event of failure.
+//! @return The number of bytes written to the output stream.
+
+int compute_ephemeris(settings *s, const DeltaTCalculator *dt_calc,
+                      FILE *output, long *rows_computed, int *status, char *error_text) {
     // Keep track of how much data we have written
     int bytes_written = 0;
 
@@ -261,8 +294,10 @@ int compute_ephemeris(settings *s, FILE *output, long *rows_computed, int *statu
         // Loop over all the time points in the ephemeris
         const int steps_total = (int) ceil((s->jd_max - s->jd_min) / s->jd_step);
         for (int step_count = 0; step_count < steps_total; step_count++) {
-            const double jd = s->jd_min + step_count * s->jd_step; // TT
-            bytes_written += compute_ephemeris_time_point(s, output, jd);
+            double jd_tt, jd_utc;
+            const double jd_in = s->jd_min + step_count * s->jd_step;
+            apply_time_standard(s, dt_calc, jd_in, &jd_tt, &jd_utc);
+            bytes_written += compute_ephemeris_time_point(s, dt_calc, output, jd_tt);
             (*rows_computed)++;
         }
     } else {
@@ -271,8 +306,10 @@ int compute_ephemeris(settings *s, FILE *output, long *rows_computed, int *statu
         while (*scan != '\0') {
             char jd_string[FNAME_LENGTH];
             str_comma_separated_list_scan(&scan, jd_string);
-            const double jd = get_float(jd_string, NULL);
-            bytes_written += compute_ephemeris_time_point(s, output, jd);
+            double jd_tt, jd_utc;
+            const double jd_in = get_float(jd_string, NULL);
+            apply_time_standard(s, dt_calc, jd_in, &jd_tt, &jd_utc);
+            bytes_written += compute_ephemeris_time_point(s, dt_calc, output, jd_tt);
             (*rows_computed)++;
         }
     }

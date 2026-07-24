@@ -105,7 +105,7 @@ docker compose run ephemeris-compute-de4xx
 To make other ephemerides, open a shell within the Docker container as follows:
 
 ```
-docker run -it ephemeris-compute-de4xx:v8 /bin/bash
+docker run -it ephemeris-compute-de4xx:v9 /bin/bash
 ```
 
 ### Producing an ephemeris
@@ -164,13 +164,13 @@ The following command-line arguments can be used to customise the ephemeris:
     * 0: X, Y, Z position (in ICRS coordinates) [3 columns]
     * 1: RA, Dec (in radians, J2000.0 coordinates; **recommended**) [2 columns]
     * 2: X, Y, Z, RA, Dec, V-band magnitude, phase, angular size [8 columns]
-    * 3: As for 2, but also: physical size, albedo, sun_dist, earth_dist, sun_ang_dist, theta_edo, eclLng, eclDist, eclLat [17 columns]
+    * 3: As for 2, but also: physical size, albedo, sun_dist, earth_dist, sun_ang_dist, theta_edo, eclLng, eclDist, eclLat, sidereal_time, delta_t [19 columns]
   * Text mode:
     * -1: JD, X, Y, Z position (ecliptic coordinates at epoch of observation) [4 columns]
     * 0: JD, X, Y, Z position (in ICRS coordinates) [4 columns]
     * 1: JD, RA, Dec (in radians, J2000.0 coordinates; **recommended**) [3 columns]
     * 2: JD, X, Y, Z, RA, Dec, V-band magnitude, phase, angular size [9 columns]
-    * 3: As for 2, but also: physical size, albedo, sun_dist, earth_dist, sun_ang_dist, theta_edo, eclLng, eclDist, eclLat [18 columns]
+    * 3: As for 2, but also: physical size, albedo, sun_dist, earth_dist, sun_ang_dist, theta_edo, eclLng, eclDist, eclLat, sidereal_time, delta_t [20 columns]
 
 ### Object names
 
@@ -218,6 +218,8 @@ files that are closest before and after the requested epoch. The predicted posit
 linearly interpolated to ensure that the output ephemerides are always continuous and differentiable.
 
 ### Change history
+
+**Version 9.0** (1 September 2026) - Added better handling of delta T.
 
 **Version 8.0** (6 June 2026) - Added support for DE405, DE430, DE431, DE440 and DE441.
 

@@ -35,9 +35,9 @@
 #include "settings/settings.h"
 
 static const char *const usage[] = {
-        "socket_client.bin [options] [[--] args]",
-        "socket_client.bin [options]",
-        NULL,
+    "socket_client.bin [options] [[--] args]",
+    "socket_client.bin [options]",
+    NULL,
 };
 
 //! Maximum length of sleep for <connect_retry>, in ms
@@ -59,7 +59,7 @@ int connect_retry(int socket_fd, const struct sockaddr *addr, socklen_t alen) {
         // Pause and retry
         struct timespec pause;
         pause.tv_sec = 0;
-        pause.tv_nsec = (int) (pause_ms * 1e6);  // nanoseconds
+        pause.tv_nsec = (int) (pause_ms * 1e6); // nanoseconds
         nanosleep(&pause, NULL);
     }
 
@@ -80,40 +80,42 @@ int main(int argc, const char **argv) {
 
     // Scan commandline options for any switches
     struct argparse_option options[] = {
-            OPT_HELP(),
-            OPT_GROUP("Basic options"),
-            OPT_FLOAT('a', "jd_min", &ephemeris_settings.jd_min,
-                      "The Julian day number at which the ephemeris should begin; TT"),
-            OPT_FLOAT('b', "jd_max", &ephemeris_settings.jd_max,
-                      "The Julian day number at which the ephemeris should end; TT"),
-            OPT_FLOAT('s', "jd_step", &ephemeris_settings.jd_step,
-                      "The interval between the lines in the ephemeris, in days"),
-            OPT_STRING('j', "jd_list", &ephemeris_settings.jd_list,
-                       "The list of Julian day numbers to calculate (optional). If specified, this overrides <jd_min>, <jd_max> and <jd_step>."),
-            OPT_FLOAT('l', "latitude", &ephemeris_settings.latitude,
-                      "The latitude of the observation site (deg); only used if topocentric correction enabled"),
-            OPT_FLOAT('m', "longitude", &ephemeris_settings.longitude,
-                      "The longitude of the observation site (deg); only used if topocentric correction enabled"),
-            OPT_INTEGER('t', "enable_topocentric_correction", &ephemeris_settings.enable_topocentric_correction,
-                        "Set to either 0 (return geocentric coordinates) or 1 (return topocentric coordinates)"),
-            OPT_FLOAT('e', "epoch", &ephemeris_settings.ra_dec_epoch,
-                      "The epoch of the RA/Dec coordinate system, e.g. 2451545.0 for J2000"),
-            OPT_INTEGER('f', "output_format", &ephemeris_settings.output_format,
-                        "The output format for the ephemeris. See README.md."),
-            OPT_INTEGER('r', "use_orbital_elements", &ephemeris_settings.use_orbital_elements,
-                        "Set the either 0 (use DE4xx) or 1 (use orbital elements)"),
-            OPT_INTEGER('z', "output_binary", &ephemeris_settings.output_binary,
-                        "Set to either 0 (text output) or 1 (binary output)"),
-            OPT_INTEGER('c', "output_constellations", &ephemeris_settings.output_constellations,
-                        "Set to either 0 (no column for constellation names) or 1"),
-            OPT_STRING('o', "objects", &ephemeris_settings.objects_input_list,
-                       "The list of objects to produce ephemerides for. See README.md."),
+        OPT_HELP(),
+        OPT_GROUP("Basic options"),
+        OPT_FLOAT('a', "jd_min", &ephemeris_settings.jd_min,
+                  "The Julian day number at which the ephemeris should begin; TT"),
+        OPT_FLOAT('b', "jd_max", &ephemeris_settings.jd_max,
+                  "The Julian day number at which the ephemeris should end; TT"),
+        OPT_FLOAT('s', "jd_step", &ephemeris_settings.jd_step,
+                  "The interval between the lines in the ephemeris, in days"),
+        OPT_STRING('j', "jd_list", &ephemeris_settings.jd_list,
+                   "The list of Julian day numbers to calculate (optional). If specified, this overrides <jd_min>, <jd_max> and <jd_step>."),
+        OPT_STRING('i', "time_standard", &ephemeris_settings.time_standard,
+                   "The time standard to use. Either 'TT' (default) or 'UTC'."),
+        OPT_FLOAT('l', "latitude", &ephemeris_settings.latitude,
+                  "The latitude of the observation site (deg); only used if topocentric correction enabled"),
+        OPT_FLOAT('m', "longitude", &ephemeris_settings.longitude,
+                  "The longitude of the observation site (deg); only used if topocentric correction enabled"),
+        OPT_INTEGER('t', "enable_topocentric_correction", &ephemeris_settings.enable_topocentric_correction,
+                    "Set to either 0 (return geocentric coordinates) or 1 (return topocentric coordinates)"),
+        OPT_FLOAT('e', "epoch", &ephemeris_settings.ra_dec_epoch,
+                  "The epoch of the RA/Dec coordinate system, e.g. 2451545.0 for J2000"),
+        OPT_INTEGER('f', "output_format", &ephemeris_settings.output_format,
+                    "The output format for the ephemeris. See README.md."),
+        OPT_INTEGER('r', "use_orbital_elements", &ephemeris_settings.use_orbital_elements,
+                    "Set the either 0 (use DE4xx) or 1 (use orbital elements)"),
+        OPT_INTEGER('z', "output_binary", &ephemeris_settings.output_binary,
+                    "Set to either 0 (text output) or 1 (binary output)"),
+        OPT_INTEGER('c', "output_constellations", &ephemeris_settings.output_constellations,
+                    "Set to either 0 (no column for constellation names) or 1"),
+        OPT_STRING('o', "objects", &ephemeris_settings.objects_input_list,
+                   "The list of objects to produce ephemerides for. See README.md."),
 
-            OPT_INTEGER('p', "port", &service_port,
-                        "Port number for remote computation service"),
-            OPT_STRING('h', "host", &service_host,
-                       "Hostname for remote computation service"),
-            OPT_END(),
+        OPT_INTEGER('p', "port", &service_port,
+                    "Port number for remote computation service"),
+        OPT_STRING('h', "host", &service_host,
+                   "Hostname for remote computation service"),
+        OPT_END(),
     };
 
     struct argparse argparse;
@@ -129,6 +131,16 @@ int main(int argc, const char **argv) {
             printf("Error: unparsed argument <%s>\n", *(argv + i));
         }
         ephem_fatal(__FILE__, __LINE__, "Unparsed arguments");
+    }
+
+    // Validate input settings
+    {
+        int status = 0;
+        char error_text[LSTR_LENGTH];
+        settings_validate(&ephemeris_settings, &status, error_text);
+        if (status) {
+            ephem_fatal(__FILE__, __LINE__, error_text);
+        }
     }
 
     // Open socket to computation server
@@ -160,9 +172,10 @@ int main(int argc, const char **argv) {
     // Write query to buffer
     char query_buffer[LSTR_LENGTH];
     snprintf(query_buffer, LSTR_LENGTH,
-             "%.18e|%.18e|%.18e|%s|%.18e|%.18e|%d|%.18e|%d|%d|%d|%d|%s",
+             "%.18e|%.18e|%.18e|%s|%s|%.18e|%.18e|%d|%.18e|%d|%d|%d|%d|%s",
              ephemeris_settings.jd_min, ephemeris_settings.jd_max, ephemeris_settings.jd_step,
              ephemeris_settings.jd_list == NULL ? "" : ephemeris_settings.jd_list,
+             ephemeris_settings.time_standard == NULL ? "" : ephemeris_settings.time_standard,
              ephemeris_settings.latitude, ephemeris_settings.longitude,
              ephemeris_settings.enable_topocentric_correction,
              ephemeris_settings.ra_dec_epoch, ephemeris_settings.output_format, ephemeris_settings.use_orbital_elements,
@@ -205,4 +218,3 @@ int main(int argc, const char **argv) {
     if (DEBUG) ephem_log("Terminating normally.");
     return 0;
 }
-

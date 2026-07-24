@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 project(ephemeris_compute)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -Wall -std=c99 -D SRCDIR='\"${CMAKE_SOURCE_DIR}/src/\"' -D DCFVERSION='\"8.0\"' -D DEBUG=0 -D MEMDEBUG1=0 -D MEMDEBUG2=0")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -Wall -std=c99 -D SRCDIR='\"${CMAKE_SOURCE_DIR}/src/\"' -D DCFVERSION='\"9.0\"' -D DEBUG=0 -D MEMDEBUG1=0 -D MEMDEBUG2=0")
 
 include_directories(src)
 include_directories(src/argparse)
@@ -45,10 +45,12 @@ set(SOURCE_FILES
         src/listTools/ltStringProc.c
         src/listTools/ltStringProc.h
         src/main.c
+        src/mathsTools/deltaT.c
+        src/mathsTools/deltaT.h
         src/mathsTools/julianDate.c
         src/mathsTools/julianDate.h
-        src/mathsTools/precess_equinoxes.c
-        src/mathsTools/precess_equinoxes.h
+        src/mathsTools/precession.c
+        src/mathsTools/precession.h
         src/mathsTools/sphericalAst.c
         src/mathsTools/sphericalAst.h
         src/settings/settings.c

@@ -21,8 +21,8 @@
 
 CWD=$(shell pwd)
 
-VERSION = 8.0
-DATE    = 06/06/2026
+VERSION = 9.0
+DATE    = 01/09/2026
 PATHLINK= /
 
 WARNINGS           = -Wall -Wno-format-truncation -Wno-unknown-pragmas
@@ -44,13 +44,13 @@ LOCAL_BINDIR = bin
 CORE_FILES = argparse/argparse.c compute.c coreUtils/asciiDouble.c coreUtils/errorReport.c coreUtils/makeRasters.c \
              ephemCalc/constellations.c ephemCalc/magnitudeEstimate.c ephemCalc/meeus.c ephemCalc/jpl.c \
              ephemCalc/orbitalElements.c listTools/ltDict.c listTools/ltList.c listTools/ltMemory.c \
-             listTools/ltStringProc.c mathsTools/julianDate.c mathsTools/precess_equinoxes.c mathsTools/sphericalAst.c \
-             settings/settings.c
+             listTools/ltStringProc.c mathsTools/deltaT.c mathsTools/julianDate.c mathsTools/precession.c \
+             mathsTools/sphericalAst.c settings/settings.c
 
 CORE_HEADERS = argparse/argparse.h coreUtils/asciiDouble.h compute.h coreUtils/errorReport.h coreUtils/makeRasters.h \
                coreUtils/strConstants.h ephemCalc/constellations.h ephemCalc/magnitudeEstimate.h ephemCalc/meeus.h \
                ephemCalc/jpl.h ephemCalc/orbitalElements.h listTools/ltDict.h listTools/ltList.h listTools/ltMemory.h \
-               listTools/ltStringProc.h mathsTools/julianDate.h mathsTools/precess_equinoxes.h \
+               listTools/ltStringProc.h mathsTools/deltaT.h mathsTools/julianDate.h mathsTools/precession.h \
                mathsTools/sphericalAst.h settings/settings.h
 
 EPHEM_FILES = main.c

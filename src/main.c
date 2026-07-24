@@ -72,6 +72,8 @@ int main(int argc, const char **argv) {
                   "The interval between the lines in the ephemeris, in days"),
         OPT_STRING('j', "jd_list", &ephemeris_settings.jd_list,
                    "The list of Julian day numbers to calculate (optional). If specified, this overrides <jd_min>, <jd_max> and <jd_step>."),
+        OPT_STRING('i', "time_standard", &ephemeris_settings.time_standard,
+                   "The time standard to use. Either 'TT' (default) or 'UTC'."),
         OPT_FLOAT('l', "latitude", &ephemeris_settings.latitude,
                   "The latitude of the observation site (deg); only used if topocentric correction enabled"),
         OPT_FLOAT('m', "longitude", &ephemeris_settings.longitude,
@@ -113,17 +115,26 @@ int main(int argc, const char **argv) {
     // Select which NASA JPL DE4xx ephemeris to use
     jpl_setEphemerisNumber(use_de_number);
 
+    // Instantiate Delta-T calculator
+    DeltaTCalculator dt_calc;
+    if (!delta_t_init(&dt_calc)) {
+        ephem_fatal(__FILE__, __LINE__, "Failed to initialise <DeltaTCalculator>.");
+    }
+
     // Create ephemeris
     {
         int status = 0;
         char error_text[LSTR_LENGTH] = "\0";
         long row_count = 0;
-        compute_ephemeris(&ephemeris_settings, stdout, &row_count, &status, error_text);
+        compute_ephemeris(&ephemeris_settings, &dt_calc, stdout, &row_count, &status, error_text);
         if (status) {
             ephem_fatal(__FILE__, __LINE__, error_text);
             exit(1);
         }
     }
+
+    // Free Delta-T calculator
+    delta_t_free(&dt_calc);
 
     compute_ephemeris_shutdown();
     lt_freeAll(0);
